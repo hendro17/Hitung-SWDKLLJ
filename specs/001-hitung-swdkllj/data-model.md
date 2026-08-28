@@ -1,114 +1,82 @@
 # Data Model: Hitung SWDKLLJ
 
-**Turunan dari**: [spec.md](./spec.md) Key Entities + [research.md](./research.md)
+**Status**: REWRITE 2026-08-28 mengikuti `business-logic.md` (formula & tarif, delivered user 2026-08-28). Model lama berbasis PMK 16/2017 (jenis × fungsi × kategori_cc, SelisihKeterlambatan clamp −30/1825) TIDAK VALID.
 
-## 1. Enum & Tipe Dasar (`src/domain/types.ts`)
+## 1. Enums
 
-```ts
-type KodeTransaksi = 'perpanjangan' | 'balik-nama' | 'mutasi-masuk' | 'mutasi-keluar'
-type FungsiKendaraan = 'pribadi' | 'angkutan'
-type KategoriCc = 'lt-250' | 'gt-250' | 'lt-2400' | 'gt-2400'   // <250cc, >250cc, <2400cc, >2400cc
-type JenisKendaraan = 'motor' | 'mobil'
-type StatusSelisih = 'belum-jatuh-tempo' | 'tepat' | 'terlambat'
-```
+| Enum | Nilai | Catatan |
+|---|---|---|
+| `KodeTransaksi` | `PERPANJANGAN, BALIK_NAMA, MUTASI_KELUAR, MUTASI_MASUK` | Label UI: Perpanjangan/Pengesahan, Balik Nama, Mutasi Keluar, Mutasi Masuk. |
+| `Golongan` | `A, B, C1, C2, DP, DU, EP, EU, F` | Kunci tabel tarif (business-logic.md §2). |
+| `FamilyCc` | `motor, minibus-au, barang-penumpang-non-umum, null` | Family yang menyediakan radio CC konfirmasi; `null` = tanpa radio (boleh tidak muncul). Radio CC OPSIONAL sejak keputusan 2026-08-28 sesi 2. |
+| `StatusHasil` | `rincian, belum-jatuh-tempo, lunas` | `belum-jatuh-tempo` hanya mungkin untuk PERPANJANGAN (§6.1); `lunas` hanya mungkin untuk BALIK_NAMA/MUTASI_MASUK Case B. |
 
-Validasi: nilai di luar union ditolak parser CSV / guard store (tidak pernah diketik manual pengguna — semua lewat select/radio).
+Enums lama yang dihapus: `JenisKendaraan (motor|mobil)`, `KategoriCc`, `FungsiKendaraan` sebagai enum terpisah (fungsi Angkutan Umum kini terkodifikasi dalam golongan DU/EU), `StatusSelisih` (floor/cap hari tidak berlaku lagi).
 
 ## 2. Entitas
 
-### Transaksi (Card 1)
+### Transaksi
 | Field | Tipe | Aturan |
 |---|---|---|
-| kode | `KodeTransaksi` | wajib dipilih sebelum Lanjutkan; label Indonesia: Perpanjangan / Pengesahan · Balik Nama · Mutasi Masuk · Mutasi Keluar |
-
-Relasi: memilih `CalculationModel` (R8) dan menjadi bagian kunci pencarian tarif.
+| `kode` | `KodeTransaksi` | Unik per pilihan Card 1. |
+| `label` | string | Teks tombol Card 1. |
+| `familyCc` | tidak disimpan di transaksi | Family ditentukan oleh **golongan**, bukan transaksi. Transaksi mengubah alur perhitungan (§9), bukan tarif. |
 
 ### KendaraanInput (Card 2)
-| Field | Tipe | Aturan |
-|---|---|---|
-| tanggalJatuhTempo | `string` ISO date (`<input type=date>`) | wajib; tidak boleh kosong; date picker mencegah format invalid |
-| jenis | `JenisKendaraan` | wajib; menentukan opsi CC yang tampil (FR-004 dinamis) |
-| fungsi | `FungsiKendaraan` | default `pribadi`; radio chip |
-| kategoriCc | `KategoriCc` | wajib; hanya nilai relevan utk jenis: motor→lt-250/gt-250; mobil→lt-2400/gt-2400 |
-
-Relasi: kunci pencarian tarif = `(kode transaksi, jenis, fungsi, kategoriCc)`.
-
-### TarifRecord (`tarif-swdkllj.csv`, read-only)
-| Kolom CSV | Field | Tipe | Aturan validasi parser |
+| Field | Tipe | Wajib | Aturan |
 |---|---|---|---|
-| kode_transaksi | kodeTransaksi | enum §1 | harus anggota union |
-| jenis_kendaraan | jenis | enum §1 | harus anggota union |
-| fungsi_kendaraan | fungsi | enum §1 | harus anggota union |
-| kategori_cc | kategoriCc | enum §1 | harus anggota union |
-| premi_pokok | premiPokok | integer > 0 (rupiah) | bilangan bulat, tanpa desimal/negatif |
-| denda_per_tahun | dendaPerTahun | number 0 < r ≤ 1 | desimal titik, mis. 0.25 |
-| sumber_rujukan | sumberRujukan | string non-kosong | mis. `PMK 16/PMK.010/2017` |
+| `tanggalJatuhTempo` | Date | ya | Tanggal jatuh tempo asli STNK. |
+| `golongan` | `Golongan` | ya | Dari dropdown jenis kendaraan yang dirender dari kolom `deskripsi` CSV (9 pilihan; granularitas §13.3 DITUTUP 2026-08-28 sesi 2 = 9 baris deskripsi). Baris terpilih menentukan golongan → tarif. |
+| `pilihanCc` | `'bawah' \| 'atas' \| null` | tidak | Radio CC = konfirmasi opsional (tidak memblokir Hitung); prefill dari `default_cc`; selection `'atas'`/`'bawah'` dapat meng-adjust golongan dalam family sama via `konfirmasiGolongan` (kontrak domain-api §1). |
 
-Aturan integritas seluruh file:
-- Header kolom persis sesuai urutan di atas.
-- Kunci unik: tidak ada duplikat `(kode_transaksi, jenis_kendaraan, fungsi_kendaraan, kategori_cc)`.
-- Minimal lengkap: setiap kombinasi yang dapat dibentuk UI (4 transaksi × {motor×2CC + mobil×2CC} × 2 fungsi) punya baris.
-- **Satu saja pelanggaran → seluruh file ditolak** → state `tariffUnavailable` (bukan fallback parsial).
+### TarifGolongan (1 baris CSV, kontrak csv-tarif.md)
+`golongan, deskripsi, defaultCc, kartuDana, tarifPokok, tarifDendaMaksimal, konstantaDendaTriwulan (0,25), konstantaPokokPerbulan (0,083333333)`.
+Aturan integritas: 9 baris, golongan unik & lengkap, uang integer ≥ 0, konstanta ∈ [0,1] (non-A > 0), deskripsi non-kosong, defaultCc integer ≥ 1. Pelanggaran → fail-closed seluruh file (FR-008).
 
-Relasi: dicari berdasarkan KendaraanInput + Transaksi; tidak pernah dimutasi.
+### DataPeriode (hasil hitung, kontrak domain-api §3)
+`anchorDate`, `gapDays` (signed, kalender absolut), `totalOverdueYears`, `tunggakanCount = MIN(totalOverdueYears, 4)`, `berjalanYear = gapDays > 30 ? currentYear : currentYear + 1`. Slot Tunggakan N = tahun `currentYear − N`.
 
-### SelisihKeterlambatan (Baris 1 Card 3)
-| Field | Tipe | Aturan |
+### HasilPerhitungan
+| Field | Tipe | Invarian |
 |---|---|---|
-| hariAktual | integer (boleh negatif) | selisih kalender UTC jatuhTempo vs hariIni |
-| hariEfektif | integer | `clamp(hariAktual, −30, 1825\|1826)` — floor −30 hari, cap 5 tahun |
-| tahunPenuh | integer ≥ 0 | `floor(hariEfektif/365)` |
-| periodeTunggakan | integer 0..4 | `min(tahunPenuh, 4)` (Berjalan + maks 4 tunggakan = maks 5 periode) |
-| status | `StatusSelisih` | turunan tanda hariAktual |
-| dicapBatas | boolean | true bila terpotong floor/cap |
+| `status` | `StatusHasil` | — |
+| `keterlambatan` | string | Format `"{tunggakanCount} tahun, {hariDendaBerjalan} hari"` (§8). |
+| `pokokBerjalan`, `dendaBerjalan` | number | Integer rupiah; Mutasi Keluar selalu 0. |
+| `pokokTunggakan1..4`, `dendaTunggakan1..4` | number | Integer rupiah; denda tunggakan = `tarifDendaMaksimal` flat. |
+| `pokokProrata` | number | Hanya Balik Nama/Mutasi Masuk; 0 untuk yang lain. |
+| `kartuDana` | number | Selalu 3.000 dari tabel. |
+| `totalPremi` | number | Integer rupiah; Golongan A selalu 3.000 (§7). |
+| `jatuhTempoSelanjutnya` | Date | Format tampil `dd MMMM yyyy`. |
+| `keringananDiterapkan` | boolean | `true` bila kebijakan keringanan aktif (FR-012). |
 
-State transitions (hariAktual): `< −30` → −30 (belum-jatuh-tempo) · `−30..−1` → aktual (belum-jatuh-tempo) · `0` tepat · `1..1825` aktual (terlambat) · `≥1826` cap 1825/1826 (terlambat, dicap).
+**Invarian global**: semua field uang integer rupiah (pembulatan hanya via `roundMoney` pada nilai kalkulasi); tidak ada komponen negative value.
 
-### HasilPerhitungan (Card 3)
-| Field | Tipe | Aturan |
-|---|---|---|
-| selisih | `SelisihKeterlambatan` | §2 atas |
-| premiBerjalan | integer rupiah | dari TarifRecord.premiPokok |
-| dendaBerjalan | integer rupiah | `round(premi × dendaPerTahun × max(0,hariEfektif)/365)`; 0 jika status ≠ terlambat |
-| premiTunggakan[1..n] | integer rupiah | n = periodeTunggakan; masing-masing = premiPokok |
-| dendaTunggakan[1..n] | integer rupiah | masing-masing = `round(premi × dendaPerTahun × k)` |
-| tanggalJatuhTempoSelanjutnya | string ISO date | dari `CalculationModel.hitungJatuhTempoSelanjutnya()` — baseline `+ (periodeTunggakan+1) tahun` |
-| totalEstimasi | integer rupiah | Σ semua premi + denda pasca-keringanan |
-| keringananDiterapkan | boolean | jejak audit mode saat hitung |
+### AdminSession (clarified 2026-08-26)
+`verifiedToken: boolean` — verifikasi dengan membandingkan input token terhadap `VITE_ADMIN_TOKEN` (env), sync & offline OK. Tanpa email, tanpa Firebase Auth. `resetSession()` menghapus sesi.
 
-Invarian: semua rupiah integer (bulatkan per komponen, bukan total); total = penjumlahan komponen yang sudah dibulatkan.
+### KebijakanKeringanan (clarified 2026-08-26; saluran distribusi ditunda 2026-08-28)
+`periode: { tanggalMulai: Date, tanggalAkhir: Date }` (ISO). `aktif = hariIni ∈ [mulai, akhir]` pakai jam lokal perangkat — bila periode habis, otomatis kembali normal walaupun offline. Saluran distribusi global (tadinya Firebase Remote Config) **DILEWATI/DITUNDA** (keputusan pengguna 2026-08-28): periode ditetapkan admin terverifikasi dan disimpan lokal; keputusan saluran ditetapkan saat implementasi bila kebutuhan muncul. Cadence fetch (app start / event `online` / >12 jam) berlaku kembali bila saluran distribusi diadakan.
 
-### AdminSession (scaffolding)
-| Field | Tipe | Aturan |
-|---|---|---|
-| isAuthenticated | boolean | hanya bisa true via login online (`navigator.onLine === true`); gagal/offline → tetap false + pesan |
-| email | string \| null | identitas sesi; tidak ada data personal lain disimpan |
+## 3. State Machine Wizard (Card 1 → 3)
 
-### KebijakanKeringanan (FR-012)
-| Field | Tipe | Aturan |
-|---|---|---|
-| aktif | boolean | sumber: Remote Config (online) → cache localStorage (offline pakai nilai terakhir) |
-| besaran | literal `'100%'` | satu-satunya kebijakan: seluruh Denda Berjalan + Tunggakan 1–4 → 0; premi tak tersentuh; data tarif tak tersentuh |
+Transisi tidak berubah dari plan 2026-08-23, hanya guard diperbarui:
 
-Transisi: admin toggle ON → broadcast global (Remote Config) → klien fetch saat online/start → `aktif=true` → hasil hitung berikutnya denda 0; toggle OFF/logout → kembali normal.
-
-## 3. State Machine UI (`kalkulatorStore`)
-
-```
-state: { step: 1|2|3, transaksi?: KodeTransaksi, input: KendaraanInput|null, hasil?: HasilPerhitungan }
-```
-
-| Kejadian | Guard | Efek |
-|---|---|---|
-| pilih transaksi + Lanjutkan | transaksi ≠ null, else validasi "Pilih jenis transaksi" | step=2, Card 2 reveal |
-| ubah transaksi (Card 1) saat step ≥ 2 | — | **reset penuh**: input=null, hasil=undefined, step=2 dengan form kosong, Card 3 hidden (FR-003 Opsi A) |
-| Hitung Premi SWDKLLJ | semua field wajib valid && tariffAvailable | hasil=hitungPerhitungan(...), step=3, scroll ke Card 3 |
-| Hitung Ulang | — | reset penuh: transaksi=null, input=null, hasil=undefined, step=1, scroll top, focus select (FR-009) |
-
-Invarian lintas siklus: 5× hitung-reset-hitung (SC-005) tidak meninggalkan residu — seluruh field direkonstruksi dari literal default.
+1. **Idle → Step1**: pilih transaksi Card 1.
+2. **Step1 → Step2**: transaksi terpilih + tombol **"Lanjutkan"** ditekan (keputusan 2026-08-28 sesi 2); bila kembali ke Card 1 setelah Card 2 terbuka → **reset penuh** (FR-003 Option A).
+3. **Step2 → Step3 (hitung)**: tombol **"Hitung Premi SWDKLLJ"**; guard = `tanggalJatuhTempo` valid **DAN** `golongan` terpilih **DAN** `tarifStore.tariffAvailable === true`. Radio CC opsional — tidak ikut guard. Hasil `belum-jatuh-tempo`/`lunas` tetap masuk Step 3 sebagai pesan (tanpa rincian angka).
+4. **Step3 → Step2 / reset**: tombol "Hitung Ulang" mereset ke Card 1.
 
 ## 4. Sumber Kebenaran
 
-- Angka tarif: **hanya** `src/data/tarif-swdkllj.csv` (skema: [contracts/csv-tarif.md](./contracts/csv-tarif.md)), sumber regulasi PMK No. 16/PMK.010/2017.
-- Label & token visual: **hanya** Open Design project `Hitung SWDKLLJ` (transkripsi Tailwind: [contracts/ui-components.md](./contracts/ui-components.md)).
-- Rumus tanggal: `domain/models/*` per modul ([contracts/domain-api.md](./contracts/domain-api.md)).
+| Aspek | Sumber |
+|---|---|
+| Angka tarif & formula | `business-logic.md` (PMK 36/2008 terkonfirmasi Hero DB) + `src/data/tarif-swdkllj.csv` |
+| Kontrak parser CSV | `contracts/csv-tarif.md` |
+| Kontrak fungsi domain | `contracts/domain-api.md` |
+| Visual/UI | Open Design project `Hitung SWDKLLJ` via MCP (FR-014), token Tailwind v4 (research R9) |
+
+## 5. Changelog
+
+- **2026-08-28 (sesi 2)**: dropdown jenis = kolom deskripsi CSV; `cc` → `pilihanCc` radio opsional + `konfirmasiGolongan`; `defaultCc` masuk TarifGolongan; transisi wizard via tombol Lanjutkan/Hitung; Firebase Remote Config ditunda (keringanan lokal).
+- **2026-08-28**: REWRITE — enums golongan/CC-family, entitas HasilPerhitungan berbasis §8, AdminSession/KebijakanKeringanan clarified 2026-08-26.
+- 2026-08-23: versi awal (superseded).

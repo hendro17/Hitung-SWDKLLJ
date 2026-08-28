@@ -27,7 +27,7 @@ main#mulai
 ├── CardTransaksi   data-testid="card-transaksi"
 ├── CardDataKendaraan [hidden]  data-testid="card-data"
 └── CardHasil [hidden] aria-live="polite"  data-testid="card-hasil"
-footer: "Tarif dasar mengacu pada PMK No. 16/PMK.010/2017 · denda 25% per tahun keterlambatan. Hasil bersifat estimasi — penetapan resmi mengikuti ketentuan Samsat & Jasa Raharja."
+footer: "Tarif dasar mengacu pada PMK No. 36/PMK.010/2008 · denda triwulan 25% dari tarif denda maksimal per triwulan. Hasil bersifat estimasi — penetapan resmi mengikuti ketentuan Samsat & Jasa Raharja."
 ```
 
 ## 3. Kontrak Komponen
@@ -36,23 +36,22 @@ footer: "Tarif dasar mengacu pada PMK No. 16/PMK.010/2017 · denda 25% per tahun
 Logo persegi gradien brand→cyan (ikon perisai+centang OD) · judul **"Hitung SWDKLLJ"** subjudul **"Kalkulator Jasa Raharja"** · tombol **"Pasang App"** (`#btn-install`, hidden sampai beforeinstallprompt) · tombol tema bulat aria-label "Ganti tema terang/gelap". Tips iOS (`#hint-ios`, hanya iOS non-standalone): "Tips iPhone: buka menu Bagikan lalu pilih Tambahkan ke Layar Utama untuk memasang aplikasi."
 
 ### CardTransaksi
-h2 "Jenis Transaksi", sub "Pilih transaksi yang akan dilakukan di Samsat." Label "Transaksi" → select opsi: placeholder "Pilih jenis transaksi…"; `perpanjangan`="Perpanjangan / Pengesahan", `balik-nama`="Balik Nama", `mutasi-masuk`="Mutasi Masuk", `mutasi-keluar`="Mutasi Keluar". Tombol **"Lanjutkan"** disabled sampai terpilih.
+h2 "Jenis Transaksi", sub "Pilih transaksi yang akan dilakukan di Samsat." Label "Transaksi" → select opsi (value = KodeTransaksi data-model §1): placeholder "Pilih jenis transaksi…"; `PERPANJANGAN`="Perpanjangan / Pengesahan", `BALIK_NAMA`="Balik Nama", `MUTASI_MASUK`="Mutasi Masuk", `MUTASI_KELUAR`="Mutasi Keluar". Tombol **"Lanjutkan"** disabled sampai terpilih.
 
 ### CardDataKendaraan
 h2 "Data Kendaraan", sub "Lengkapi data untuk menghitung premi.", tombol-link "Ubah" (fokus ke Card 1). Field:
 - Label "Tanggal jatuh tempo" → `<input type=date>`
-- Label "Jenis kendaraan" → select: "Pilih jenis kendaraan…" · `motor`="Sepeda Motor" · `mobil`="Mobil Penumpang"
-- Legend "Fungsi kendaraan" → radio-chip: `pribadi`="Pribadi" (default checked) · `angkutan`="Angkutan Umum"
-- Fieldset "Besar CC mesin" (hidden hingga jenis dipilih) → radio-chip dinamis dari data: motor→"<250cc"/">250cc", mobil→"<2400cc"/">2400cc"
-- Tombol **"Hitung Premi SWDKLLJ"** (disabled saat invalid) + hint "Lengkapi tanggal jatuh tempo, jenis kendaraan, dan besar CC."
+- Label "Jenis kendaraan" → select (opsi = kolom `deskripsi` tarif CSV, value `golongan`; §13.3 DITUTUP keputusan pengguna 2026-08-28 sesi 2): placeholder "Pilih jenis kendaraan…" · 9 opsi sesuai tabel master business-logic §2
+- Fieldset radio "CC mesin" (hidden hingga jenis kendaraan dipilih; OPSIONAL — tak pernah memblokir Hitung) → pilihan radio dinamis per family: motor (C1/C2) → "<250cc" / ">250cc"; minibus AU (DU/EU) → "≤1600cc" / ">1600cc"; barang/penumpang bukan AU (DP/F) → "≤2400cc" / ">2400cc"; A/B/EP/EU(bus) → tanpa radio. Pilihan default ditentukan `default_cc` baris golongan (terpilih bila `default_cc > batas family`, keputusan pengguna 2026-08-28 sesi 2). Memilih radio → `konfirmasiGolongan` adjust golongan dalam family sama (domain-api §1); label/kemunculan persis mengikuti Open Design (FR-014, T005)
+- Tombol **"Hitung Premi SWDKLLJ"** (disabled hanya bila tanggal invalid / golongan belum dipilih / tarif tak tersedia) + hint "Lengkapi tanggal jatuh tempo dan jenis kendaraan."
 
 Emits/interaksi via store: `lanjutkan`, `ubahTransaksi→reset penuh`, `hitung`.
 
 ### CardHasil
-h2 "Hasil Perhitungan", sub "Estimasi tarif SWDKLLJ Anda." Chip ringkasan: label transaksi · jenis · fungsi · CC. Baris `<dl>`:
-1. **"Selisih keterlambatan"** (+ note "min 30 hari · maks 5 tahun" bila terlambat) — dd: `"Terlambat {N} hari"` (+ " (maks 5 tahun)" bila dicap, `text-warn`) | "Tepat jatuh tempo hari ini" | "Belum jatuh tempo, lebih awal {N} hari"
-2. **"Premi berjalan"** · 3. **"Denda berjalan"** ("Rp 0" bila nol) · 4–7. pasangan **"Premi tunggakan {k}"** / **"Denda tunggakan {k}"** k=1..n (dd `text-warn` bila >0)
-Baris tetap: **"Total estimasi"** (Intl id-ID IDR, 0 desimal) · panel **"Jatuh tempo selanjutnya"** (tanggal panjang Indonesia) · tombol outline **"Hitung Ulang"**.
+h2 "Hasil Perhitungan", sub "Estimasi tarif SWDKLLJ Anda." Chip ringkasan: label transaksi · jenis kendaraan (deskripsi) · label radio CC terpilih (absen bila null). Status khusus menggantikan seluruh baris dengan pesan tunggal: `belum-jatuh-tempo` → **"Premi Belum Jatuh Tempo / Masih Berlaku"** (block §6.1, hanya PERPANJANGAN); `lunas` → pesan Lunas total 0 (Case B BALIK_NAMA/MUTASI_MASUK). Baris `<dl>` utk status `rincian` (business-logic §8):
+1. **"Keterlambatan"** — dd `"{tunggakan_count} tahun, {hari_denda_berjalan} hari"` (`text-warn`)
+2. **"Pokok berjalan"** · 3. **"Denda berjalan"** ("Rp 0" bila nol) · 4–11. pasangan **"Pokok tunggakan {k}"** / **"Denda tunggakan {k}"** k=1..n, n≤4, baris absen bila tunggakan k tak ada (dd `text-warn` bila >0) · **"Pokok prorata"** + note "{bulan_prorata} bulan" (hanya BALIK_NAMA / MUTASI_MASUK)
+Baris tetap: **"Kartu dana"** (Rp 3.000) · **"Total estimasi"** (Intl id-ID IDR, 0 desimal) · panel **"Jatuh tempo selanjutnya"** (format `dd MMMM yyyy` Indonesia) · tombol outline **"Hitung Ulang"**.
 
 Format uang: `Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', maximumFractionDigits:0 })`.
 

@@ -28,11 +28,15 @@
 
 ## R5. Sumber angka tarif: PMK No. 16/PMK.010/2017
 
+> ⚠️ **SUPERSEDED 2026-08-28** — angka tarif kini PMK No. 36/PMK.010/2008, tabel 9 golongan terkonfirmasi database internal Hero. Sumber kebenaran: [business-logic.md](./business-logic.md) §2 + [contracts/csv-tarif.md](./contracts/csv-tarif.md). Angka PMK 16/2017 di bawah TIDAK VALID.
+
 - **Decision**: Angka premi pokok dalam CSV merujuk PMK No. 16/PMK.010/2017 (perubahan atas PMK 36/PMK.010/2008), tarif tahunan termasuk biaya kartu dana Rp3.000: motor 50–250cc Rp35.000; motor >250cc Rp83.000; mobil penumpang/pickup/sedan/jeep bukan AU ≤2400cc Rp143.000; mobil barang/truk >2400cc Rp163.000; bus/mikrobus bukan AU Rp153.000; mobil penumpang AU ≤1600cc Rp73.000; bus AU >1600cc Rp90.000. Denda mengikuti model aplikasi: 25% premi per periode tunggakan (denda berjalan pro-rata 25% × sisa hari/365) — konsisten prototype Open Design; kolom `denda_per_tahun` di CSV membuat nilai ini data-driven sehingga perubahan regulasi tidak menyentuh kode. Setiap baris CSV membawa kolom `sumber_rujukan`.
 - **Rationale**: Zero-assumption — angka tidak dikarang; footer Open Design sendiri mencantumkan rujukan PMK tersebut. Nilai final dikonfirmasi ulang saat penyusunan CSV (tugas implementasi) sebelum test disetujui.
 - **Alternatives considered**: Tarif tiered denda harian resmi PMK (25%/50%/75%/100% per 90-hari) (ditolak untuk rilis ini: model Card 3 spesifik spec adalah Berjalan + Tunggakan 1–4 sesuai desain Open Design; struktur CSV tetap memungkinkan evolusi).
 
 ## R6. Distribusi global status keringanan + login admin online-only
+
+> ⚠️ **SUPERSEDED 2026-08-28 (sesi 2)** — Firebase (Auth & Remote Config) **DILEWATI/DITUNDA** keputusan pengguna: tidak diinstal. Implementasi berjalan lokal: verifikasi token admin vs `VITE_ADMIN_TOKEN` (sinkron, offline) + periode keringanan disimpan/di-observe secara lokal (localStorage). Saluran distribusi global akan dilihat kembali saat implementasi bila perlu. Lihat [contracts/admin-service.md](./contracts/admin-service.md).
 
 - **Decision**: Scaffolding memakai Firebase Auth (email/password, aturan admin) + Firebase Remote Config boolean `keringanan_aktif`. Admin login HANYA dieksekusi saat `navigator.onLine` (offline → blokir dengan pesan "Login admin memerlukan koneksi internet"). Toggle admin menulis Remote Config → semua klien mengambil nilai saat app start / kembali online; nilai terakhir di-cache ke localStorage sehingga mode offline memakai status terakhir yang diketahui. Seluruhnya dibungkus interface `AdminService` (`login`, `logout`, `observeKeringanan`) dan disembunyikan di balik feature flag `VITE_FEATURE_ADMIN=false` untuk rilis awal (FR-011). SDK di-import dinamis agar bundle utama tetap ringan dan jalur offline tidak memuat kode jaringan.
 - **Rationale**: Spec clarified 2026-08-22 meminta broadcast global + brainstorming mekanisme distribusi di fase plan. Remote Config memberi distribusi global nyata tanpa membangun backend sendiri; caching lokal menjaga prinsip offline-first untuk fungsi hitung. Ini satu-satunya kebutuhan server, terdokumentasi di konstitusi ("kecuali ada kebutuhan nyata yang terdokumentasi").
@@ -40,11 +44,15 @@
 
 ## R7. Daftar jenis kendaraan & filter CC dinamis
 
+> ⚠️ **SUPERSEDED 2026-08-28 (sesi 2)** — dropdown jenis kendaraan = 9 opsi kolom `deskripsi` CSV (A, B, C1, C2, DP, DU, EP, EU, F; §13.3 DITUTUP). CC kini **radio konfirmasi OPSIONAL** dinamis per family (bukan input angka wajib): motor <250cc/>250cc, minibus-AU ≤1600cc/>1600cc, barang/penumpang non-AU ≤2400cc/>2400cc; prefill mengikuti `default_cc`; memilih radio meng-adjust golongan via `konfirmasiGolongan` dalam family; tidak memblokir tombol Hitung. Lihat FR-004 spec + [business-logic.md](./business-logic.md) §2.1.
+
 - **Decision**: Dropdown jenis kendaraan mengikuti Open Design persis: `Sepeda Motor` (opsi CC: `<250cc`, `>250cc`) dan `Mobil Penumpang` (opsi CC: `<2400cc`, `>2400cc`). Fieldset CC tersembunyi sampai jenis dipilih; opsi dirender dinamis dari data (`TARIF[jenis].opsi`), bukan hardcoded di template. Skema CSV mendukung penambahan golongan lain (bus, truk, dsb.) tanpa perubahan kode.
 - **Rationale**: FR-014 mengikat UI ke sumber Open Design; zero-assumption melarang menambah golongan yang tidak ada di desain. Struktur data-driven memenuhi FR-004 Opsi A sekaligus menyisakan jalur ekspansi.
 - **Alternatives considered**: Daftar lengkap golongan PMK (bus, truk, derek…) di dropdown awal (ditunda: tidak ada di desain Open Design; aktifkan via CSV + satu entri mapping saat diminta).
 
 ## R8. Model perhitungan per jenis transaksi (FR-007)
+
+> ⚠️ **SUPERSEDED sebagian 2026-08-28** — rumus baseline JTS `jatuh tempo + (n+1) tahun` digantikan aturan per modul (PERPANJANGAN: gap>30→anchor / else SET_YEAR(due,y+1); BALIK_NAMA & MUTASI_MASUK Case A→hariIni+1tahun; MUTASI_KELUAR→anchor). Pola strategy TETAP. Lihat FR-007 + [contracts/domain-api.md](./contracts/domain-api.md) §6.
 
 - **Decision**: Pola strategy: interface `CalculationModel` dengan metode `hitungJatuhTempoSelanjutnya(jatuhTempo, periodeTerpakai)` — empat implementasi (`perpanjangan`, `balik-nama`, `mutasi-masuk`, `mutasi-keluar`) di `domain/models/`. Baseline rumus identik dengan prototype Open Design: `jatuh tempo + (n+1) tahun` (n = jumlah periode tunggakan terhitung). Besaran premi/denda TIDAK berubah antar transaksi (asumsi spec); diferensiasi rumus tanggal diverifikasi unit test per modul, dan penyimpangan rumus per transaksi (jika ketemu saat implementasi) cukup mengubah satu model tanpa menyentuh UI/store.
 - **Rationale**: FR-007 clarified: "beberapa model penghitungan… masing-masing memiliki logic tanggal jatuh tempo selanjutnya sendiri… didefinisikan saat implementasi dan diverifikasi per modul". Strategy pattern memisahkan titik variasi itu secara eksplisit.
@@ -57,6 +65,8 @@
 - **Alternatives considered**: CSS variables polos tanpa Tailwind (ditolak: melanggar mandat pengguna); library komponen (daisyUI dst.) (ditolak: konstitusi V melarang framework UI tambahan).
 
 ## R10. Semantika tanggal & batas keterlambatan
+
+> ⚠️ **SUPERSEDED 2026-08-28** — model floor −30/cap 1825 hari & denda pro-rata harian TIDAK BERLAKU. Semantika baru: gap_days kalender absolut signed (presisi kabisat), batas block gap_days>30 tanpa tunggakan (Perpanjangan), denda triwulan TANPA grace (1 hari lewat → triwulan 1), rollover >365/366 hari jadi slot Tunggakan baru, cap tunggakan MIN(total_overdue_years,4). Lihat [business-logic.md](./business-logic.md) §3–§6 + [contracts/domain-api.md](./contracts/domain-api.md) §3–§6.
 
 - **Decision**: Selisih hari = selisih kalender UTC (hindari DST/locale drift): `hariAktual = floor((hariIni − jatuhTempo)/86400000)`. Aturan batas: `hariEfektif = clamp(hariAktual, −30, 1825)` (1826 pada rentang lintas tahun kabisat — cap "5 tahun" diuji dengan kedua nilai); `tahunPenuh = max(0, floor(hariEfektif/365))` → jumlah periode tunggakan k=1..min(tahunPenuh,4) + premi berjalan (maks 5 periode total). Status: belum-jatuh-tempo (negatif), tepat (0), terlambat (positif). Boundary wajib-uji: −40, −30, −1, 0, 1, 365, 366, 1825, 1826, 2190 (6 tahun → cap).
 - **Rationale**: Mencerminkan acceptance scenario SC-002 & US3 (-30 hari floor, 0, ~730 aktual, 5 tahun cap) dan konstanta prototype Open Design (`MAKS_AWAL_HARI=30`, `MAX_TERLAMBAT_HARI=1825`, `DENDA_PER_TAHUN=0.25`).
