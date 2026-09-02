@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email in ["support@sysinnovate.my.id"];
+    }
+    function tokenDoc(hash) {
+      return get(/databases/$(database)/documents/admin_tokens/$(hash));
+    }
+    function isActiveAdmin(hash) {
+      return exists(/databases/$(database)/documents/admin_tokens/$(hash))
+          && tokenDoc(hash).data.status == 'active';
+    }
+
+    // admin_tokens: GET by hash boleh (admin verify via SHA256 lookup)
+    // LIST/CREATE/UPDATE hanya super admin; DELETE never; hash 256-bit unguessable
+    match /admin_tokens/{hash} {
+      allow get: if true;
+      allow list: if isSuperAdmin();
+      allow create, update: if isSuperAdmin();
+      allow delete: if false;
+    }
+
+    // keringanan: semua boleh read (public butuh list untuk sidebar)
+    // tulis: admin hanya doc miliknya, super admin override semua
+    match /keringanan/{id} {
+      allow read: if true;
+      allow create: if isSuperAdmin() || isActiveAdmin(request.resource.data.createdBy);
+      // update: superAdmin override; admin: tetap owner (createdBy tidak ganti) + updatedBy aktif
+      allow update: if isSuperAdmin()
+          || (resource.data.createdBy == request.resource.data.createdBy
+              && resource.data.createdBy == request.resource.data.updatedBy
+              && isActiveAdmin(request.resource.data.updatedBy));
+      // delete: superAdmin override; admin: owner aktif (request.resource null saat delete)
+      allow delete: if isSuperAdmin() || isActiveAdmin(resource.data.createdBy);
+    }
+  }
+}
