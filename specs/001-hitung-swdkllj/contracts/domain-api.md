@@ -119,7 +119,7 @@ Aturan umum:
 - Pokok per periode = `tarif_pokok`. Denda tunggakan per tahun penuh = `tarif_denda_maksimal` **flat 100%**, bukan persentase dari pokok.
 - Keringanan aktif (FR-012): semua komponen **denda** menjadi 0; pokok dan tarif tabel tak tersentuh.
 - `totalPremi` = jumlah seluruh komponen + kartu dana, integer rupiah.
-- Output string: `keterlambatan` = `"{tunggakanCount} tahun, {hariDendaBerjalan} hari"`; bulan prorata sebagai string tambahan untuk Balik Nama/Mutasi Masuk; `jatuhTempoSelanjutnya` format `dd MMMM yyyy` (business-logic.md §8).
+- Output string: `keterlambatan` = `"{tunggakanCount} tahun, {bulanPenuh} bulan, {sisaHari} hari"`; bulan prorata sebagai string tambahan untuk Balik Nama/Mutasi Masuk; `jatuhTempoSelanjutnya` format `dd MMMM yyyy` (business-logic.md §8).
 
 ### 6.1 PERPANJANGAN (Pengesahan/Perpanjangan) — business-logic.md §9.1
 

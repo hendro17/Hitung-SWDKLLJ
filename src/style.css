@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Tokens Open Design → utilitas Tailwind (contracts/ui-components.md §1) */
+  --color-app: oklch(0.962 0.012 230);
+  --color-surface: oklch(0.996 0.003 230);
+  --color-ink: oklch(0.26 0.05 252);
+  --color-mu: oklch(0.53 0.03 250);
+  --color-line: oklch(0.895 0.018 232);
+  --color-brand: oklch(0.55 0.15 250);
+  --color-brand-strong: oklch(0.47 0.17 255);
+  --color-brand-soft: oklch(0.93 0.03 245);
+  --color-cyan: oklch(0.8 0.15 195);
+  --color-cyan-ink: oklch(0.52 0.16 200);
+  --color-warn: oklch(0.55 0.18 27);
+
+  --radius-card: 1.5rem;
+  --radius-ctrl: 1rem;
+  --radius-chip: 9999px;
+
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 250 / 0.06), 0 8px 24px oklch(0.2 0.02 250 / 0.08);
+  --shadow-pop: 0 12px 32px oklch(0.2 0.02 250 / 0.18);
+
+  --animate-rise: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Dark mode overrides token (html.dark → custom variant) */
+.dark {
+  --color-app: oklch(0.185 0.03 252);
+  --color-surface: oklch(0.235 0.032 250);
+  --color-ink: oklch(0.94 0.01 230);
+  --color-mu: oklch(0.71 0.02 240);
+  --color-line: oklch(0.33 0.03 250);
+  --color-warn: oklch(0.72 0.15 24);
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  @apply bg-app text-ink antialiased;
+  margin: 0;
+}
+
+/* Kontrol angka rata-kanan (konsisten) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.reveal {
+  animation: var(--animate-rise);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}

@@ -1,0 +1,47 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import HomeView from '../../src/views/HomeView.vue'
+import { useKalkulatorStore } from '../../src/stores/kalkulatorStore'
+
+const CSV = `golongan,deskripsi,default_cc,kartu_dana,tarif_pokok,tarif_denda_maksimal,konstanta_denda_triwulan,konstanta_pokok_perbulan
+A,"Kendaraan Khusus (Ambulance, Damkar, dsb)",2499,3000,0,0,0,0
+B,"Alat Berat (Exavator, Crane, dsb)",2499,3000,20000,20000,0.25,0.083333333
+C1,Sepeda Motor Roda 2 / Roda 3,150,3000,32000,32000,0.25,0.083333333
+C2,Sepeda Motor Sport > 250cc,255,3000,80000,80000,0.25,0.083333333
+DP,"Minibus, Jeep, Sedan, Pickup Ang. Barang",1500,3000,140000,100000,0.25,0.083333333
+DU,Minibus Angkutan Umum sd. 1600cc,1500,3000,70000,70000,0.25,0.083333333
+EP,Bus dan Microbus Bukan Ang. Umum,3000,3000,150000,100000,0.25,0.083333333
+EU,"Bus / Microbus Angkutan Umum, Minibus Ang. Umum > 1600cc",3000,3000,87000,87000,0.25,0.083333333
+F,Truck / Ang. Barang > 2400cc,2499,3000,160000,100000,0.25,0.083333333
+`
+
+async function mountHome() {
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(CSV) }) as unknown as typeof fetch
+  const wrapper = mount(HomeView)
+  await flushPromises()
+  return wrapper
+}
+const card1 = (w: ReturnType<typeof mount>) => w.find('[data-testid="card-transaksi"]')
+const card2 = (w: ReturnType<typeof mount>) => w.find('[data-testid="card-data"]')
+const card3 = (w: ReturnType<typeof mount>) => w.find('[data-testid="card-hasil"]')
+const CHECK = process.env.VAR_HOLD || ''
+
+describe('t2', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+  it('x', async () => {
+    const wrapper = await mountHome()
+    await card1(wrapper).find('select').setValue('PERPANJANGAN')
+    await card1(wrapper).find('button').trigger('click')
+    await wrapper.vm.$nextTick()
+    if (CHECK.includes('c3off')) expect(card3(wrapper).isVisible()).toBe(false)
+    if (CHECK.includes('c2on')) expect(card2(wrapper).isVisible()).toBe(true)
+    await card2(wrapper).find('select').setValue('C1')
+    await card2(wrapper).find('input[type="date"]').setValue('2024-05-26')
+    await card2(wrapper).find('button[type="submit"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    console.log('FINAL step=', useKalkulatorStore().step, 'display=', getComputedStyle(card3(wrapper).element).display, 'inline=', JSON.stringify(card3(wrapper).attributes('style')))
+    expect(card3(wrapper).isVisible()).toBe(true)
+    expect(useKalkulatorStore().hasil?.totalPremi).toBe(185000)
+  })
+})
