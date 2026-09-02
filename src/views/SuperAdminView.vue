@@ -110,7 +110,7 @@ async function onLogin() {
 }
 async function loadList() {
   if (!store.isSuperAdmin) return
-  try { tokens.value = await listAdminTokens() } catch {}
+  try { tokens.value = await listAdminTokens() } catch {/* list failed — keep empty */}
 }
 async function onCreate() {
   genErr.value = ''; genOk.value = ''

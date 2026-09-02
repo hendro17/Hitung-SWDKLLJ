@@ -14,9 +14,9 @@ export function useKeringanan() {
     if (cached.length) admin.setKeringananList(cached)
     try {
       unsub = observeKeringananCollection((list) => admin.setKeringananList(list))
-    } catch {}
+    } catch {/* Firestore offline — use cache */}
     const onOnline = () => {
-      try { unsub?.(); unsub = observeKeringananCollection((list) => admin.setKeringananList(list)) } catch {}
+      try { unsub?.(); unsub = observeKeringananCollection((list) => admin.setKeringananList(list)) } catch {/* offline resubscribe — ignore */}
     }
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)

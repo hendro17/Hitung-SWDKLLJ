@@ -41,7 +41,7 @@ export const useAdminStore = defineStore('admin', () => {
     try {
       if (v) localStorage.setItem(LS_ACTIVE, v)
       else localStorage.removeItem(LS_ACTIVE)
-    } catch {}
+    } catch {/* storage quota / private mode — best effort */}
   })
 
   function setSession(hash: string, until: string, label: string) {
@@ -50,17 +50,17 @@ export const useAdminStore = defineStore('admin', () => {
       localStorage.setItem(LS_SESSION, hash)
       localStorage.setItem(LS_UNTIL, until)
       localStorage.setItem(LS_LABEL, label)
-    } catch {}
+    } catch {/* storage quota / private mode — best effort */}
   }
 
   function resetSession() {
     sessionHash.value = null; sessionUntil.value = null; sessionLabel.value = null
-    try { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_UNTIL); localStorage.removeItem(LS_LABEL) } catch {}
+    try { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_UNTIL); localStorage.removeItem(LS_LABEL) } catch {/* storage private mode — ignore */}
   }
 
   function setKeringananList(list: KeringananDoc[]) {
     keringananList.value = list
-    try { localStorage.setItem(LS_LIST, JSON.stringify(list)) } catch {}
+    try { localStorage.setItem(LS_LIST, JSON.stringify(list)) } catch {/* quota exceeded — best effort */}
   }
 
   function setActiveKeringananId(id: string | null) {

@@ -38,7 +38,7 @@ export async function deleteKeringanan(id: string): Promise<void> {
 export function observeKeringananCollection(cb: (list: KeringananDoc[]) => void): Unsubscribe {
   return onSnapshot(collection(getDb(), COLL), (snap) => {
     const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<KeringananDoc, 'id'>) }) as KeringananDoc)
-    try { localStorage.setItem('keringanan_list', JSON.stringify(list)) } catch {}
+    try { localStorage.setItem('keringanan_list', JSON.stringify(list)) } catch {/* quota / private mode — best effort */}
     cb(list)
   })
 }
@@ -47,5 +47,5 @@ export function loadKeringananCache(): KeringananDoc[] {
   try {
     const raw = localStorage.getItem('keringanan_list')
     return raw ? JSON.parse(raw) as KeringananDoc[] : []
-  } catch { return [] }
+  } catch {/* JSON parse fallback — return empty */ return [] }
 }
