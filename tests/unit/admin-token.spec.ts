@@ -41,9 +41,8 @@ describe('admin token — generate & status derive', () => {
   })
 
   it('revoked status menimpa valid — ditangani server rules (client cek status===active)', () => {
-    const status: string = 'revoked'
-    const todayInRange = true
-    const isValid = status === 'active' && todayInRange
-    expect(isValid).toBe(false)
+    const isValid = (status: string, todayInRange: boolean) => status === 'active' && todayInRange
+    expect(isValid('revoked', true)).toBe(false)
+    expect(isValid('active', true)).toBe(true)
   })
 })

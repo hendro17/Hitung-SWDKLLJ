@@ -3,7 +3,7 @@ import type { Golongan, TarifGolongan } from './types'
 
 const HEADER = 'golongan,deskripsi,default_cc,kartu_dana,tarif_pokok,tarif_denda_maksimal,konstanta_denda_triwulan,konstanta_pokok_perbulan'
 
-const GOLONGAN_VALID: readonly Golongan[] = ['A', 'B', 'C1', 'C2', 'DP', 'DU', 'EP', 'EU', 'F']
+const GOLONGAN_VALID: ReadonlySet<Golongan> = new Set<Golongan>(['A', 'B', 'C1', 'C2', 'DP', 'DU', 'EP', 'EU', 'F'])
 
 class CsvError extends Error {}
 
@@ -53,13 +53,13 @@ function assertKonstanta(v: string, label: string): number {
 }
 
 export function parseCsvTarif(input: string): TarifGolongan[] {
-  if (input.charCodeAt(0) === 0xfeff) throw new CsvError('BOM tidak diizinkan')
+  if (input.codePointAt(0) === 0xfeff) throw new CsvError('BOM tidak diizinkan')
 
   // Normalisasi CRLF → LF (CRLF ditoleransi)
-  const text = input.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const text = input.replaceAll('\r\n', '\n').replaceAll('\r', '\n')
   const lines = text.split('\n')
   // buang baris kosong akhir
-  while (lines.length && lines[lines.length - 1].trim() === '') lines.pop()
+  while (lines.length && lines.at(-1)?.trim() === '') lines.pop()
   const rows = lines.map((l) => l.trimEnd())
 
   if (rows.length === 0) throw new CsvError('file kosong')
@@ -81,7 +81,7 @@ export function parseCsvTarif(input: string): TarifGolongan[] {
     if (f.length !== 8) throw new CsvError(`jumlah kolom ${f.length} ≠ 8`)
 
     const golongan = f[0] as Golongan
-    if (!GOLONGAN_VALID.includes(golongan)) throw new CsvError(`golongan tak dikenal: ${golongan}`)
+    if (!GOLONGAN_VALID.has(golongan)) throw new CsvError(`golongan tak dikenal: ${golongan}`)
     if (seen.has(golongan)) throw new CsvError(`golongan duplikat: ${golongan}`)
     seen.add(golongan)
 

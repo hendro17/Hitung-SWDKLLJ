@@ -32,7 +32,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   // expired auto-reset
   watch(visibleKeringananList, (vis) => {
-    if (activeKeringananId.value && !vis.find((d) => d.id === activeKeringananId.value)) {
+    if (activeKeringananId.value && !vis.some((d) => d.id === activeKeringananId.value)) {
       activeKeringananId.value = null
     }
   })

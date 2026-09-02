@@ -98,8 +98,7 @@ const OPSI_RADIO = computed(() => {
   const b = radioBatas.value
   const opsi: { value: PilihanCc; label: string }[] = []
   if (b === null) return opsi
-  opsi.push({ value: 'bawah', label: `≤ ${b}cc` })
-  opsi.push({ value: 'atas', label: `> ${b}cc` })
+  opsi.push({ value: 'bawah', label: `≤ ${b}cc` }, { value: 'atas', label: `> ${b}cc` })
   return opsi
 })
 

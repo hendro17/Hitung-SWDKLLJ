@@ -1,7 +1,7 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-40">
     <div class="absolute inset-0 bg-black/40" @click="emit('close')"></div>
-    <aside id="app-sidebar" role="dialog" aria-modal="true" class="absolute left-0 top-0 h-full w-72 bg-surface border-r border-line rounded-r-3xl shadow-pop flex flex-col overflow-auto" @keydown.esc="emit('close')">
+    <dialog id="app-sidebar" :open="open" aria-modal="true" class="absolute left-0 top-0 h-full w-72 bg-surface border-r border-line rounded-r-3xl shadow-pop flex flex-col overflow-auto" @keydown.esc="emit('close')">
       <div class="p-4 border-b border-line flex items-center justify-between">
         <p class="font-bold text-ink">Menu</p>
         <button type="button" class="rounded-full border border-line px-3 py-1 text-sm" @click="emit('close')">Tutup</button>
@@ -20,7 +20,7 @@
           </button>
         </div>
       </div>
-    </aside>
+    </dialog>
   </div>
 </template>
 

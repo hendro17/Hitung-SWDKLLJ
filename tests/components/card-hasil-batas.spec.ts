@@ -136,8 +136,8 @@ describe('CardHasil string keterlambatan & batas tunggakan (T045/US3)', () => {
     const { wrapper, store } = await mountHasil('PERPANJANGAN', new Date(2019, 4, 26)) // 7 tahun
     expect(store.hasil?.pokokTunggakan4).toBe(C1.tarifPokok + C1.kartuDana) // cap tangkap 4 slot
     const dts = wrapper.findAll('dt').map((d) => d.text())
-    expect(dts.filter((l) => l.startsWith('Pokok tunggakan')).length).toBe(4)
-    expect(dts.filter((l) => l.startsWith('Denda tunggakan')).length).toBe(4)
+    expect(dts.filter((l) => l.startsWith('Pokok tunggakan'))).toHaveLength(4)
+    expect(dts.filter((l) => l.startsWith('Denda tunggakan'))).toHaveLength(4)
     expect(wrapper.text()).not.toContain('tunggakan 5')
   })
 

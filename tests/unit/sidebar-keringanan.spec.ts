@@ -28,7 +28,7 @@ describe('sidebar keringanan — exclusive switch & expired hide', () => {
     const toggle = (id: string) => { active = active === id ? null : id }
     toggle('a'); expect(active).toBe('a')
     toggle('b'); expect(active).toBe('b') // exclusive — a off, b on
-    toggle('b'); expect(active).toBe(null) // off
+    toggle('b'); expect(active).toBeNull() // off
   })
 
   it('expired auto-reset: active menunjuk doc expired → null', () => {
@@ -36,13 +36,13 @@ describe('sidebar keringanan — exclusive switch & expired hide', () => {
     const list = [doc('a', '2026-09-30')]
     const vis = filterVisibleKeringanan(list, today)
     let active: string | null = 'a'
-    if (!vis.find((d) => d.id === active)) active = null
-    expect(active).toBe(null)
+    if (!vis.some((d) => d.id === active)) active = null
+    expect(active).toBeNull()
   })
 
   it('default OFF → normal (tanpa apply)', () => {
-    const active: string | null = null
-    expect(active).toBe(null)
+    const getActive = (): string | null => null
+    expect(getActive()).toBeNull()
     // kalkulator baca null → hitung normal (diuji di keringanan-selective)
   })
 
@@ -50,6 +50,6 @@ describe('sidebar keringanan — exclusive switch & expired hide', () => {
     const today = new Date(2026, 8, 15)
     const list = [doc('a', '2026-09-20'), doc('b', '2026-10-31'), doc('c', '2026-09-15')]
     const vis = filterVisibleKeringanan(list, today)
-    expect(vis.length).toBe(3)
+    expect(vis).toHaveLength(3)
   })
 })
