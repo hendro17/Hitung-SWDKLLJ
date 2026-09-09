@@ -4,7 +4,7 @@ import type { DataPeriode } from './types'
 const MS_PER_DAY = 86_400_000
 
 /** Selisih hari kalender absolut antara dua tanggal (lokal), presisi kabisat. */
-function hariAntara(a: Date, b: Date): number {
+export function hariAntara(a: Date, b: Date): number {
   const ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
   const ub = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
   return Math.round((ua - ub) / MS_PER_DAY)
@@ -35,8 +35,12 @@ export function bangunDataPeriode(dueDateOriginal: Date, hariIni: Date): DataPer
   const currentYear = hariIni.getFullYear()
   const anchorDate = setYear(dueDateOriginal, currentYear)
   const gapDays = hariAntara(anchorDate, hariIni)
-  const totalOverdueYears = currentYear - dueDateOriginal.getFullYear()
-  const tunggakanCount = Math.min(Math.max(totalOverdueYears, 0), 4)
+  // Anniversary-based: bila anchor tahun ini belum sampai (gap>30),
+  // 1 tahun kalender belum genap → kurangi 1 agar tidak overcount.
+  // Mis. due 14 Nov 2024, today 3 Sep 2026 → raw 2 → efektif 1 + berjalan 2026.
+  const rawOverdue = currentYear - dueDateOriginal.getFullYear()
+  const totalOverdueYears = Math.max(rawOverdue - (gapDays > 30 ? 1 : 0), 0)
+  const tunggakanCount = Math.min(totalOverdueYears, 4)
   const berjalanYear = gapDays > 30 ? currentYear : currentYear + 1
   const tunggakanYears = [1, 2, 3, 4].map((n) => tahunTunggakan(currentYear, n))
   return {

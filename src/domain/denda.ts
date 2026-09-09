@@ -33,16 +33,18 @@ const MS_PER_DAY = 86_400_000
 const HARI_PER_TRIWULAN = 90
 const MAKS_TRIWULAN = 4
 
-/** Denda berjalan triwulan berbasis hari (business-logic §5.3):
+/** Parameter tarif denda berjalan — subset TarifGolongan (structural typing). */
+export interface TarifDenda {
+  tarifPokok: number
+  tarifDendaMaksimal: number
+  konstantaDendaTriwulan: number
+}
+
+/** Denda berjalan PMK 16/PMK.010/2017 §5.3 — % berjenjang dari tarif pokok:
+ *  1-90 hari=25%, 91-180=50%, 181-270=75%, >270=100% (cap tarifDendaMaksimal, maks Rp100.000).
  *  Q1=1-90, Q2=91-180, Q3=181-270, Q4=271-360 (+1 kabisat → 271-361).
  *  denda = min(Q × konstanta × tarifPokok, tarifDendaMaksimal). hari≤0 → Q0 denda 0. */
-export function hitungDendaBerjalan(
-  titikAwal: Date,
-  hariIni: Date,
-  tarifPokok: number,
-  tarifDendaMaksimal: number = tarifPokok,
-  konstantaDendaTriwulan = 0.25
-): HasilDendaBerjalan {
+export function hitungDendaBerjalan(titikAwal: Date, hariIni: Date, tarif: TarifDenda): HasilDendaBerjalan {
   const { fullMonths, remainingDays } = bulanPenuhDanSisa(titikAwal, hariIni)
   const bulanDenda = fullMonths + (remainingDays > 0 ? 1 : 0)
   const ua = Date.UTC(titikAwal.getFullYear(), titikAwal.getMonth(), titikAwal.getDate())
@@ -50,8 +52,8 @@ export function hitungDendaBerjalan(
   const hari = Math.round((ub - ua) / MS_PER_DAY)
   let triwulan = 0
   if (hari > 0) triwulan = Math.min(Math.ceil(hari / HARI_PER_TRIWULAN), MAKS_TRIWULAN)
-  const raw = Math.round(tarifPokok * konstantaDendaTriwulan * triwulan)
-  const denda = Math.min(raw, tarifDendaMaksimal)
+  const raw = Math.round(tarif.tarifPokok * tarif.konstantaDendaTriwulan * triwulan)
+  const denda = Math.min(raw, tarif.tarifDendaMaksimal)
   return { bulanDenda, triwulan, denda, hariDendaBerjalan: remainingDays }
 }
 
@@ -60,17 +62,23 @@ export interface HasilPokokProrata {
   pokokProrata: number
 }
 
-/** Pokok prorata dgn grace 0–15/>15 hari (business-logic §5.4). Konstanta per bulan dari tabel. */
-export function hitungPokokProrata(
-  titikAwal: Date,
-  titikAkhir: Date,
-  tarifPokok: number,
-  kartuDana: number,
-  konstantaPokokPerbulan = 0.083333333
-): HasilPokokProrata {
+/** Parameter tarif prorata pokok — subset TarifGolongan (structural typing). */
+export interface TarifProrata {
+  tarifPokok: number
+  kartuDana: number
+  konstantaPokokPerbulan: number
+}
+
+/** Pokok prorata dgn grace 0–15/>15 hari (business-logic §5.4). Konstanta per bulan dari tabel.
+ *  Kartu dana melekat pokok: bulan 0 & tarifPokok > 0 → 0 (tanpa kartu).
+ *  Pengecualian Golongan A (tarifPokok = 0): bulan 0 → kartu dana murni (A hanya bayar kartu dana). */
+export function hitungPokokProrata(titikAwal: Date, titikAkhir: Date, tarif: TarifProrata): HasilPokokProrata {
   const { fullMonths, remainingDays } = bulanPenuhDanSisa(titikAwal, titikAkhir)
   const bulanProrata = fullMonths + (remainingDays > 15 ? 1 : 0)
-  const pokokProrata = Math.max(roundMoney(tarifPokok * (konstantaPokokPerbulan * bulanProrata) + kartuDana), 0)
+  if (bulanProrata === 0) {
+    return { bulanProrata, pokokProrata: tarif.tarifPokok === 0 ? tarif.kartuDana : 0 }
+  }
+  const pokokProrata = Math.max(roundMoney(tarif.tarifPokok * (tarif.konstantaPokokPerbulan * bulanProrata) + tarif.kartuDana), 0)
   return { bulanProrata, pokokProrata }
 }
 

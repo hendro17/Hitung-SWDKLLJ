@@ -1,6 +1,6 @@
 // PERPANJANGAN — business-logic §9.1 / domain-api §6.1 (research R8: strategy pattern DIPERTAHANKAN).
 import type { KodeTransaksi, StatusHasil } from '../types'
-import { bangunDataPeriode, setYear } from '../periode'
+import { hariAntara, setYear, tambahTahun } from '../periode'
 
 export interface CalculationModel {
   kode: KodeTransaksi
@@ -12,15 +12,19 @@ export interface CalculationModel {
 
 export const modelPerpanjangan: CalculationModel = {
   kode: 'PERPANJANGAN',
-  // gap>30 → anchorDate (tahun tetap currentYear); else SET_YEAR(due, currentYear+1)
+  // Sisa masa berlaku = due − today.
+  // >30 hari → belum waktunya (JTS tetap due). ≤30 hari → JTS = anchor + 1.
+  // Khusus expired dengan anchor >30 hari lagi: hanya tahun berjalan yang dibeli
+  // (sampai anchor) — renewal berikutnya di anchor, bukan anchor+1.
   hitungJatuhTempoSelanjutnya(due, hariIni) {
-    const p = bangunDataPeriode(due, hariIni)
-    if (p.gapDays > 30) return p.anchorDate
-    return setYear(due, hariIni.getFullYear() + 1)
+    if (hariAntara(due, hariIni) > 30) return due
+    const anchor = setYear(due, hariIni.getFullYear())
+    if (hariAntara(anchor, hariIni) > 30) return anchor
+    return tambahTahun(anchor, 1)
   },
+  // Blok hanya bila STNK masih valid >30 hari (renewal terlalu dini).
   tentukanStatus(due, hariIni) {
-    const p = bangunDataPeriode(due, hariIni)
-    if (p.tunggakanCount === 0 && p.gapDays > 30) return 'belum-jatuh-tempo'
+    if (due > hariIni && hariAntara(due, hariIni) > 30) return 'belum-jatuh-tempo'
     return 'rincian'
   }
 }

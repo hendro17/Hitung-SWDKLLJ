@@ -155,6 +155,8 @@ pokok_prorata_raw = tarif_pokok × (konstanta_pokok_perbulan × bulan_prorata) +
 pokok_prorata = round_money(pokok_prorata_raw)
 ```
 
+**Aturan kartu dana (Hero, 2026-09-07):** kartu dana melekat pada Pokok — jika `bulan_prorata = 0` dan `tarif_pokok > 0`, pokok_prorata = 0 (TIDAK menagih kartu dana). Pengecualian Golongan A (`tarif_pokok = 0`): bulan 0 → pokok_prorata = kartu_dana murni, karena Golongan A memang hanya membayar kartu dana.
+
 **Contoh verifikasi** (golongan C1, tarif_pokok=32.000, kartu_dana=3.000):
 - 5 bulan: `32.000 × (0,083333333×5) + 3.000 = 13.333,33 + 3.000 = 16.333,33 → round_money = 16.400` ✓
 - 3 bulan: `32.000 × (0,083333333×3) + 3.000 = 8.000 + 3.000 = 11.000` ✓ (sudah bulat, tidak perlu dibulatkan lagi)
@@ -348,5 +350,11 @@ Ditandai eksplisit (bukan silent assumption), mohon dikonfirmasi/dikoreksi sebel
 1. **(9.2 Case B)** Formula Pokok Prorata untuk Balik Nama/Mutasi Masuk saat STNK masih berlaku penuh (tidak ada tunggakan) — definisi `anniversary_terakhir_yang_lewat` diasumsikan `due_date_original - 1 tahun`, belum ada contoh angka untuk diverifikasi silang.
 2. **(9.3)** Jatuh Tempo Selanjutnya untuk Mutasi Keluar ketika `tunggakan_count == 0` diasumsikan tetap = `anchor_date` (tidak berubah).
 3. **(2.1)** Dropdown "jenis kendaraan" diasumsikan menampilkan 9 golongan level-atas (sesuai database), bukan sub-tipe granular (A1-A4, D1-D5, E1-E5, F1-F5) yang muncul di gambar referensi PMK.
+
+### 13.3 Konfirmasi Hero (2026-09-07) — CLOSED
+
+1. **MK JTS overdue berat**: JTS Mutasi Keluar = `anchor_date` meski tanggal sudah lewat — **BENAR sesuai spec**. Proses MK jika JT < 365 hari tidak dihitung (tidak perlu tambah tahun).
+2. **Denda berjalan**: denda langsung berjalan sejak hari pertama telat, TANPA grace. Pembulatan ≤15 hari hanya berlaku untuk Pokok Prorata, bukan denda.
+3. **Kartu dana saat prorata 0 bulan**: TIDAK boleh menagih kartu dana (3.000) jika pokok 0 — kartu dana melekat pada Pokok. Kecuali Golongan A yang memang hanya membayar kartu dana saja (tanpa pokok & denda). → Diimplementasikan di `hitungPokokProrata` (src/domain/denda.ts).
 
 Selain 3 poin di atas, seluruh formula core (Pokok, Denda Tunggakan, Denda Berjalan/triwulan, Pokok Prorata, pembulatan, periode/tunggakan, block 30-hari) sudah **terverifikasi matematis** terhadap contoh angka & tabel PMK yang diberikan Hero.
