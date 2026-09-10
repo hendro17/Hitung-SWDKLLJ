@@ -69,4 +69,24 @@ describe('DataPeriode (domain-api §3)', () => {
     expect(setYear(new Date(2024, 1, 29), 2028)).toEqual(new Date(2028, 1, 29))
     expect(setYear(new Date(2024, 4, 26), 2027)).toEqual(new Date(2027, 4, 26))
   })
+
+  // Pinning subtraction anniversary-based (GitNexus HIGH: bangunDataPeriode)
+  it('tunggakanCount boundary 30/31: gap=30 → raw, gap=31 → raw−1', () => {
+    // due 26 Nov 2025 (raw 1): anchor 26 Nov 2026
+    expect(bangunDataPeriode(new Date(2025, 10, 26), new Date(2026, 9, 27)).tunggakanCount).toBe(1) // gap 30
+    expect(bangunDataPeriode(new Date(2025, 10, 26), new Date(2026, 9, 26)).tunggakanCount).toBe(0) // gap 31
+  })
+
+  it('kabisat: anchor Feb 29 → Feb 28, subtraction konsisten', () => {
+    // due 29 Feb 2024 (raw 2): anchor 28 Feb 2026
+    expect(bangunDataPeriode(new Date(2024, 1, 29), new Date(2026, 0, 10)).tunggakanCount).toBe(1) // gap +49
+    expect(bangunDataPeriode(new Date(2024, 1, 29), new Date(2026, 2, 1)).tunggakanCount).toBe(2) // gap +1
+  })
+
+  it('cap 4 + subtraction: gap>30 mengurangi sebelum MIN', () => {
+    // due 26 Mei 2022 (raw 4), hari 15 Jan 2026 → gap +131 → 3
+    expect(bangunDataPeriode(new Date(2022, 4, 26), new Date(2026, 0, 15)).tunggakanCount).toBe(3)
+    // due 26 Mei 2021 (raw 5) → 4 → MIN 4
+    expect(bangunDataPeriode(new Date(2021, 4, 26), new Date(2026, 0, 15)).tunggakanCount).toBe(4)
+  })
 })

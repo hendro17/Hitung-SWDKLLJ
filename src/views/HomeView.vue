@@ -17,7 +17,7 @@
     </main>
 
     <footer class="mx-auto max-w-[30rem] px-4 pb-8 text-center text-xs leading-relaxed text-mu">
-      Tarif dasar mengacu pada PMK No. 36/PMK.010/2008 · denda triwulan 25% dari tarif denda maksimal per triwulan.
+      Tarif dasar mengacu pada PMK No. 16/PMK.010/2017 · denda berjenjang 25%/50%/75%/100% dari pokok per triwulan (maks Rp100.000).
       Hasil bersifat estimasi — penetapan resmi mengikuti ketentuan Samsat &amp; Jasa Raharja.
     </footer>
   </div>

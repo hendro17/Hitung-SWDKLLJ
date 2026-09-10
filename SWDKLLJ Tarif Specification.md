@@ -15,7 +15,7 @@ Modul ini menghitung premi SWDKLLJ (Sumbangan Wajib Dana Kecelakaan Lalu Lintas 
 | MUTASI_KELUAR | Mutasi Keluar |
 | MUTASI_MASUK | Mutasi Masuk (logic identik dengan Balik Nama Pemilik) |
 
-Referensi regulasi: PMK No. 36/PMK.010/2008 (SWDKLLJ), dikonfirmasi ulang terhadap tabel data tarif internal yang berlaku saat ini.
+Referensi regulasi: PMK No. 16/PMK.010/2017 (SWDKLLJ), dikonfirmasi ulang terhadap tabel data tarif internal yang berlaku saat ini.
 
 ---
 
@@ -108,7 +108,9 @@ denda_tunggakan_1_tahun = tarif_denda_maksimal (lookup langsung, flat 100% — b
 ```
 Golongan A selalu `0`.
 
-### 5.3 Denda Berjalan — progresif per triwulan (untuk tahun yang sedang berjalan, belum genap 1 tahun penuh)
+### 5.3 Denda Berjalan — berjenjang PMK 16/2017 (untuk tahun yang sedang berjalan, belum genap 1 tahun penuh)
+
+Aturan PMK 16/2017: 1–90 hari = 25% pokok, 91–180 = 50%, 181–270 = 75%, >270 = 100% (cap tarif_denda_maksimal, maks Rp100.000).
 
 **Langkah 1 — hitung jumlah bulan terlewati (bulan_denda), TANPA grace period:**
 ```
@@ -127,17 +129,17 @@ Q4 = bulan_denda 10-12
 triwulan = CEIL(bulan_denda / 3), maksimal 4 (tidak ada triwulan ke-5)
 ```
 
-**Langkah 3 — hitung nominal:**
+**Langkah 3 — hitung nominal (basis tarif_pokok PMK 16/2017):**
 ```
-denda_berjalan = tarif_denda_maksimal × konstanta_denda_triwulan × triwulan
-              = tarif_denda_maksimal × 0,25 × triwulan
+denda_berjalan = min(tarif_pokok × konstanta_denda_triwulan × triwulan, tarif_denda_maksimal)
+               = min(tarif_pokok × 0,25 × triwulan, tarif_denda_maksimal)
 ```
 
 **Rollover 365/366 hari:** jika hari terlewati dalam 1 periode tahun berjalan melebihi jumlah hari aktual tahun tersebut (365 hari normal, 366 kalau periode tersebut melewati 29 Februari), maka:
 - tahun tersebut dianggap **penuh 1 tahun overdue** → dipindahkan menjadi 1 slot Tunggakan baru (pokok + denda maksimal penuh, triwulan=4/100%)
 - sisa hari setelah rollover dihitung ulang sebagai hari ke-1 dari periode/tahun berikutnya (bulan_denda & triwulan dihitung ulang dari titik ini)
 
-**Contoh verifikasi** (golongan C1, tarif_denda_maksimal=32.000): anchor 26 Mei 2026 → today 27 Agustus 2026 = 93 hari. full_months (26 Mei→26 Agu) = 3 bulan genap, remaining_days = 1 (27-26 Agu) → bulan_denda = 4 → triwulan = CEIL(4/3) = 2. `denda_berjalan = 32.000 × 0,25 × 2 = 16.000` ✓.
+**Contoh verifikasi** (golongan C1, tarif_pokok=32.000): anchor 26 Mei 2026 → today 27 Agustus 2026 = 93 hari. full_months (26 Mei→26 Agu) = 3 bulan genap, remaining_days = 1 (27-26 Agu) → bulan_denda = 4 → triwulan = CEIL(4/3) = 2. `denda_berjalan = min(32.000 × 0,25 × 2, 32.000) = 16.000` (50% pokok) ✓.
 
 ### 5.4 Pokok Prorata — khusus Balik Nama Pemilik & Mutasi Masuk
 

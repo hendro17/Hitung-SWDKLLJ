@@ -94,11 +94,12 @@ describe('hitungPerhitungan — aturan umum', () => {
     expect(r.pokokProrata).toBe(0)
     expect(r.totalPremi).toBe(9000)
 
-    // Anchor di masa depan (gap>30, due 26 Mei 2024, hari 1 Jan 2026, gap 145): berjalan 0, hanya tunggakan
+    // Anchor di masa depan + overdue (gap>30, due 26 Mei 2024, hari 1 Jan 2026, gap 145):
+    // anniversary-based → 1 tunggakan + berjalan 2026 (start 26 Mei 2025)
     const rFutureAnchor = hitung('PERPANJANGAN', 'A', new Date(2024, 4, 26), new Date(2026, 0, 1))
-    expect(rFutureAnchor.pokokBerjalan).toBe(0)
+    expect(rFutureAnchor.pokokBerjalan).toBe(3000)
     expect(rFutureAnchor.pokokTunggakan1).toBe(3000)
-    expect(rFutureAnchor.pokokTunggakan2).toBe(3000)
+    expect(rFutureAnchor.pokokTunggakan2).toBe(0)
     expect(rFutureAnchor.totalPremi).toBe(6000)
 
     // Belum jatuh tempo (gap>30, tunggakanCount=0) → total 0, kartu tidak dihitung
@@ -193,6 +194,71 @@ describe('hitungPerhitungan — aturan umum', () => {
   })
 })
 
+// §9.2/§9.4: Balik Nama & Mutasi Masuk — JTS pindah ke hariIni+1 tahun → prorata pokok.
+describe('BALIK_NAMA / MUTASI_MASUK — skema prorata (§9.2, §9.4)', () => {
+  it('Case B: due > hariIni (STNK berlaku) → prorata saja, tanpa berjalan/denda/tunggakan', () => {
+    // due 26 Mei 2027, anniversary 26 Mei 2026 → 27 Agu = 3 bln → 32k×3/12+3k = 11.000
+    const r = hitung('BALIK_NAMA', 'C1', new Date(2027, 4, 26), HARI_INI)
+    expect(r.status).toBe('rincian')
+    expect(r.pokokBerjalan).toBe(0)
+    expect(r.dendaBerjalan).toBe(0)
+    expect(r.pokokTunggakan1).toBe(0)
+    expect(r.dendaTunggakan1).toBe(0)
+    expect(r.bulanProrata).toBe(3)
+    expect(r.pokokProrata).toBe(11000)
+    expect(r.totalPremi).toBe(11000)
+    expect(r.keterlambatan).toBe('0 tahun, 0 bulan, 0 hari')
+    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2027, 7, 27))
+  })
+
+  it('Case B: due 2 Sep 2026 (gap +6) → prorata 12 bln dari anniversary 2 Sep 2025', () => {
+    // 2 Sep 2025 → 27 Agu 2026 = 11 bln 25 hari → 12 bln → 32k×12/12+3k = 35.000
+    const r = hitung('BALIK_NAMA', 'C1', new Date(2026, 8, 2), HARI_INI)
+    expect(r.pokokBerjalan).toBe(0)
+    expect(r.dendaBerjalan).toBe(0)
+    expect(r.bulanProrata).toBe(12)
+    expect(r.pokokProrata).toBe(35000)
+    expect(r.totalPremi).toBe(35000)
+  })
+
+  it('Case A mid-cycle: due 26 Des 2025 (expired 8 bln, anchor >30d) → berjalan+denda+prorata, TIDAK nol', () => {
+    // prorataMulai 26 Des 2025 → 27 Agu 2026 = 8 bln 1 hari → 8 bln → 24.400
+    // denda: 244 hari → Q3 = 24.000; berjalan bundled 35.000; tunggakan 0
+    const r = hitung('BALIK_NAMA', 'C1', new Date(2025, 11, 26), HARI_INI)
+    expect(r.status).toBe('rincian')
+    expect(r.pokokBerjalan).toBe(35000)
+    expect(r.dendaBerjalan).toBe(24000)
+    expect(r.pokokTunggakan1).toBe(0)
+    expect(r.dendaTunggakan1).toBe(0)
+    expect(r.bulanProrata).toBe(8)
+    expect(r.pokokProrata).toBe(24400)
+    expect(r.totalPremi).toBe(83400)
+    expect(r.keterlambatan).toBe('0 tahun, 8 bulan, 1 hari')
+  })
+
+  it('Case A window: due 20 Sep 2025 (anchor 24d lagi) → tahun anchor belum dibeli, T1 + prorata 11 bln', () => {
+    // tunggakan 1 (2025), prorata dari 20 Sep 2024 → 27 Agu 2026 = 23 bln 7 hari → 23 bln → probe: 11 bln 32.400
+    const r = hitung('BALIK_NAMA', 'C1', new Date(2025, 8, 20), HARI_INI)
+    expect(r.pokokBerjalan).toBe(0)
+    expect(r.dendaBerjalan).toBe(0)
+    expect(r.pokokTunggakan1).toBe(35000)
+    expect(r.dendaTunggakan1).toBe(32000)
+    expect(r.bulanProrata).toBe(11)
+    expect(r.pokokProrata).toBe(32400)
+    expect(r.totalPremi).toBe(99400)
+  })
+
+  it('MUTASI_MASUK identik BALIK_NAMA untuk band mid-cycle', () => {
+    const due = new Date(2025, 11, 26)
+    const bn = hitung('BALIK_NAMA', 'C1', due, HARI_INI)
+    const mm = hitung('MUTASI_MASUK', 'C1', due, HARI_INI)
+    expect(mm.totalPremi).toBe(bn.totalPremi)
+    expect(mm.pokokProrata).toBe(bn.pokokProrata)
+    expect(mm.bulanProrata).toBe(bn.bulanProrata)
+    expect(mm.keterlambatan).toBe(bn.keterlambatan)
+  })
+})
+
 // ⚠️ OPEN VALIDATIONS (business-logic §13) — ASUMSI, BUKAN FINAL.
 describe('pending-validasi §13.1 — BALIK_NAMA Case B jalur prorata (asumsi anniversary = due − 1 tahun)', () => {
   // Asumsi terdokumentasi: anniversary_terakhir_yang_lewat = dueDateOriginal − 1 tahun.
@@ -208,6 +274,27 @@ describe('pending-validasi §13.1 — BALIK_NAMA Case B jalur prorata (asumsi an
     expect(r.bulanProrata).toBeGreaterThan(0)
     // asumsi: anniversary = due − 1 tahun = 6 Okt 2025 → 27 Agu 2026 (10 bulan 21 hari → 11 bulan)
     expect(r.bulanProrata).toBe(11)
+  })
+})
+
+// Pinning perilaku anniversary-based (tunggakanCount subtraction) — GitNexus HIGH: bangunDataPeriode.
+describe('tunggakanCount anniversary-based — subtraction mid-cycle', () => {
+  it('MUTASI_KELUAR due 26 Des 2025 (gap 121, raw 1→0) → semua slot 0, total 0', () => {
+    const r = hitung('MUTASI_KELUAR', 'C1', new Date(2025, 11, 26), HARI_INI)
+    expect(r.status).toBe('rincian')
+    expect(r.pokokTunggakan1).toBe(0)
+    expect(r.dendaTunggakan1).toBe(0)
+    expect(r.totalPremi).toBe(0)
+    expect(r.keterlambatan).toBe('0 tahun, 8 bulan, 1 hari')
+    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2026, 11, 26))
+  })
+
+  it('PERPANJANGAN due tahun depan → belum-jatuh-tempo (blok, bukan tagih+denda)', () => {
+    const r = hitung('PERPANJANGAN', 'C1', new Date(2027, 2, 6), HARI_INI)
+    expect(r.status).toBe('belum-jatuh-tempo')
+    expect(r.totalPremi).toBe(0)
+    expect(r.pokokBerjalan).toBe(0)
+    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2027, 2, 6))
   })
 })
 

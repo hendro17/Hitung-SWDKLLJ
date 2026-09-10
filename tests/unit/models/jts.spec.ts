@@ -41,6 +41,19 @@ describe('JTS per modul (domain-api §6 / T012)', () => {
   })
 })
 
+// Pinning overdue anchor>30 & boundary 30/31 — GitNexus HIGH: hitungJatuhTempoSelanjutnya.
+describe('JTS overdue anchor>30 & boundary 30/31', () => {
+  it('PERPANJANGAN overdue, anchor >30 hari lagi → JTS = anchor (renewal di anchor)', () => {
+    // due 26 Des 2025 sudah lewat; anchor 26 Des 2026 masih 121 hari lagi → JTS anchor
+    expect(jts('PERPANJANGAN', new Date(2025, 11, 26))).toEqual(new Date(2026, 11, 26))
+  })
+
+  it('boundary: gap 31 → JTS = due; gap 30 → JTS = due + 1 tahun', () => {
+    expect(jts('PERPANJANGAN', new Date(2026, 8, 27))).toEqual(new Date(2026, 8, 27)) // 31 hari lagi
+    expect(jts('PERPANJANGAN', new Date(2026, 8, 26))).toEqual(new Date(2027, 8, 26)) // 30 hari lagi
+  })
+})
+
 // ⚠️ OPEN VALIDATION (business-logic §13.2) — ASUMSI, BUKAN FINAL.
 describe('pending-validasi §13.2 — MUTASI_KELUAR tunggakanCount=0 (asumsi JTS = anchorDate)', () => {
   // Asumsi terdokumentasi: bila tidak ada tunggakan sama sekali, JTS tetap anchorDate.

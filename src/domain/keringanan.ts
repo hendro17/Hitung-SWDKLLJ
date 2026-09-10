@@ -45,15 +45,28 @@ export function isKeringananExpired(doc: Pick<KeringananDoc, 'akhir'>, today: Da
 export function applyKeringananSelective(hasil: HasilPerhitungan, doc: KeringananDoc | null): HasilPerhitungan {
   if (!doc || !isKeringananAktif(doc)) return hasil
   const r = { ...hasil }
+  type SlotHasil =
+    | 'pokokTunggakan1' | 'dendaTunggakan1'
+    | 'pokokTunggakan2' | 'dendaTunggakan2'
+    | 'pokokTunggakan3' | 'dendaTunggakan3'
+    | 'pokokTunggakan4' | 'dendaTunggakan4'
+  const slots: Array<[keyof KeringananDoc, SlotHasil]> = [
+    ['pokokTunggakan1', 'pokokTunggakan1'],
+    ['dendaTunggakan1', 'dendaTunggakan1'],
+    ['pokokTunggakan2', 'pokokTunggakan2'],
+    ['dendaTunggakan2', 'dendaTunggakan2'],
+    ['pokokTunggakan3', 'pokokTunggakan3'],
+    ['dendaTunggakan3', 'dendaTunggakan3'],
+    ['pokokTunggakan4', 'pokokTunggakan4'],
+    ['dendaTunggakan4', 'dendaTunggakan4']
+  ]
   let changed = false
-  if (doc.pokokTunggakan1) { r.pokokTunggakan1 = 0; changed = true }
-  if (doc.dendaTunggakan1) { r.dendaTunggakan1 = 0; changed = true }
-  if (doc.pokokTunggakan2) { r.pokokTunggakan2 = 0; changed = true }
-  if (doc.dendaTunggakan2) { r.dendaTunggakan2 = 0; changed = true }
-  if (doc.pokokTunggakan3) { r.pokokTunggakan3 = 0; changed = true }
-  if (doc.dendaTunggakan3) { r.dendaTunggakan3 = 0; changed = true }
-  if (doc.pokokTunggakan4) { r.pokokTunggakan4 = 0; changed = true }
-  if (doc.dendaTunggakan4) { r.dendaTunggakan4 = 0; changed = true }
+  for (const [flag, slot] of slots) {
+    if (doc[flag] === true) {
+      r[slot] = 0
+      changed = true
+    }
+  }
   // dendaBerjalan tidak termasuk selective 8 bool — tetap normal (semua denda lama dihapus; kini per-slot)
   if (changed) {
     r.keringananDiterapkan = true

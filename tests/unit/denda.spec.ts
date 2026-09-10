@@ -12,7 +12,7 @@ describe('roundMoney (domain-api §2 / business-logic §4)', () => {
 })
 
 describe('hitungDendaBerjalan — triwulan TANPA grace (business-logic §5.3 / domain-api §4)', () => {
-  const TARIF = 32000 // C1
+  const TARIF = { tarifPokok: 32000, tarifDendaMaksimal: 32000, konstantaDendaTriwulan: 0.25 } // C1
 
   it('contoh verifikasi C1: anchor 26 Mei 2026 → 27 Agu 2026 (93 hari) → 16.000', () => {
     const r = hitungDendaBerjalan(new Date(2026, 4, 26), new Date(2026, 7, 27), TARIF)
@@ -38,7 +38,7 @@ describe('hitungDendaBerjalan — triwulan TANPA grace (business-logic §5.3 / d
   it('triwulan cap 4 — periode 12+ bulan tidak membentuk triwulan 5', () => {
     const r = hitungDendaBerjalan(new Date(2025, 7, 27), new Date(2026, 7, 27), TARIF) // tepat 365 hari
     expect(r.triwulan).toBe(4)
-    expect(r.denda).toBe(TARIF * 0.25 * 4)
+    expect(r.denda).toBe(TARIF.tarifPokok * 0.25 * 4)
     const r2 = hitungDendaBerjalan(new Date(2024, 2, 1), new Date(2026, 2, 1), TARIF) // 730 hari
     expect(r2.triwulan).toBe(4)
   })
@@ -47,27 +47,29 @@ describe('hitungDendaBerjalan — triwulan TANPA grace (business-logic §5.3 / d
     // 2023-02-28 → 2024-02-29 = 366 hari
     const r = hitungDendaBerjalan(new Date(2023, 1, 28), new Date(2024, 1, 29), TARIF)
     expect(r.triwulan).toBe(4)
-    expect(r.denda).toBe(TARIF)
+    expect(r.denda).toBe(TARIF.tarifPokok)
   })
 })
 
 describe('hitungPokokProrata — grace 0–15/>15 (business-logic §5.4 / domain-api §5)', () => {
   const POKOK = 32000
   const KARTU = 3000
+  const TARIF = { tarifPokok: POKOK, kartuDana: KARTU, konstantaPokokPerbulan: 0.083333333 }
 
   it('contoh verifikasi: 5 bulan → 16.400; 3 bulan → 11.000', () => {
-    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 5, 1), POKOK, KARTU).pokokProrata).toBe(16400)
-    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 3, 1), POKOK, KARTU).pokokProrata).toBe(11000)
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 5, 1), TARIF).pokokProrata).toBe(16400)
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 3, 1), TARIF).pokokProrata).toBe(11000)
   })
 
   it('bulanProrata: sisa 0–15 hari → bawah; >15 hari → atas', () => {
-    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 3, 16), POKOK, KARTU).bulanProrata).toBe(3)
-    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 3, 17), POKOK, KARTU).bulanProrata).toBe(4)
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 3, 16), TARIF).bulanProrata).toBe(3)
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 3, 17), TARIF).bulanProrata).toBe(4)
   })
 
-  it('0 bulan → pokok prorata = kartu dana (murni), 1 bulan → dibulatkan naik', () => {
-    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 0, 1), POKOK, KARTU).pokokProrata).toBe(3000)
-    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 1, 1), POKOK, KARTU).pokokProrata).toBe(
+  it('0 bulan → pokokProrata 0 (kartu melekat pokok); Gol A (pokok 0) → kartu dana murni; 1 bulan → bulat naik', () => {
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 0, 1), TARIF).pokokProrata).toBe(0)
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 0, 1), { ...TARIF, tarifPokok: 0 }).pokokProrata).toBe(3000)
+    expect(hitungPokokProrata(new Date(2026, 0, 1), new Date(2026, 1, 1), TARIF).pokokProrata).toBe(
       roundMoney(32000 * 0.083333333 * 1 + 3000)
     )
   })

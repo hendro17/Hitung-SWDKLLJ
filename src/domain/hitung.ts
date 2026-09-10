@@ -1,14 +1,17 @@
 // hitungPerhitungan — orkestrator utama (domain-api §6 / business-logic §9). Murni.
 import type { DataPeriode, HasilPerhitungan, InputHitung, TarifGolongan } from './types'
-import { bangunDataPeriode } from './periode'
+import { bangunDataPeriode, setYear } from './periode'
 import { bulanPenuhDanSisa, hitungDendaBerjalan, hitungPokokProrata } from './denda'
 import { anniversaryProrata } from './models/balik-nama'
 import { hitungJatuhTempoSelanjutnya, tentukanStatus } from './models'
-
-function formatKeterlambatan(tunggakan: number, mulai: Date, kini: Date): string {
-  if (kini < mulai) return `${tunggakan} tahun, 0 bulan, 0 hari`
-  const { fullMonths, remainingDays } = bulanPenuhDanSisa(mulai, kini)
-  return `${tunggakan} tahun, ${fullMonths} bulan, ${remainingDays} hari`
+// Perpanjangan: mulai keterlambatan = anniversary terakhir yang sudah lewat.
+// Due valid (masih berlaku) → tidak pernah terlambat (0/0/0).
+// Keterlambatan faktual: waktu sejak due, tahun di-cap 4 (mengikuti cap slot tunggakan).
+function formatKeterlambatan(due: Date, kini: Date): string {
+  if (kini <= due) return '0 tahun, 0 bulan, 0 hari'
+  const { fullMonths, remainingDays } = bulanPenuhDanSisa(due, kini)
+  const tahun = Math.min(Math.floor(fullMonths / 12), 4)
+  return `${tahun} tahun, ${fullMonths % 12} bulan, ${remainingDays} hari`
 }
 
 function buildHasilKosong(
@@ -21,7 +24,7 @@ function buildHasilKosong(
 ): HasilPerhitungan {
   return {
     status,
-    keterlambatan: formatKeterlambatan(p.tunggakanCount, p.anchorDate, hariIni),
+    keterlambatan: formatKeterlambatan(dueDateOriginal, hariIni),
     pokokBerjalan: 0,
     dendaBerjalan: 0,
     pokokTunggakan1: 0,
@@ -47,47 +50,68 @@ function buildTunggakanSlots(tunggakanCount: number, pokokBundled: number, denda
   return { t1: slot(1), t2: slot(2), t3: slot(3), t4: slot(4) }
 }
 
+/** Hasil tahun berjalan + prorata — bagian variabel per model transaksi. */
+interface HasilBerjalanProrata {
+  pokokBerjalan: number
+  dendaBerjalan: number
+  pokokProrata: number
+  bulanProrata: number
+}
+
+const hasilKosong = (): HasilBerjalanProrata => ({ pokokBerjalan: 0, dendaBerjalan: 0, pokokProrata: 0, bulanProrata: 0 })
+
+/** BALIK_NAMA / MUTASI_MASUK (§9.2, §9.4) — prorata + berjalan sesuai posisi due. */
+function resolveBalikMasuk(p: DataPeriode, hariIni: Date, tarif: TarifGolongan, pokokBundled: number): HasilBerjalanProrata {
+  const dendaDari = (mulai: Date) => hitungDendaBerjalan(mulai, hariIni, tarif)
+  const prorataDari = (mulai: Date) => hitungPokokProrata(mulai, hariIni, tarif)
+
+  // Case B (§9.2): STNK masih berlaku — prorata saja, tanpa berjalan/denda.
+  if (p.dueDateOriginal > hariIni) {
+    const pr = prorataDari(anniversaryProrata(p.dueDateOriginal))
+    return { ...hasilKosong(), pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
+  }
+  // Case A: overdue — prorata mulai anniversary terakhir yang sudah lewat.
+  const prorataMulai = p.gapDays > 0 ? setYear(p.dueDateOriginal, p.currentYear - 1) : p.anchorDate
+  if (p.gapDays > 30) {
+    // anchor tahun ini masih >30 hari lagi: tagih tahun berjalan mulai anniversary terakhir + prorata.
+    const d = dendaDari(prorataMulai)
+    const pr = prorataDari(prorataMulai)
+    return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
+  }
+  if (p.gapDays <= 0) {
+    // anchor sudah lewat: berjalan dari anchor + prorata.
+    const d = dendaDari(p.anchorDate)
+    const pr = prorataDari(p.anchorDate)
+    return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
+  }
+  // gap ∈ (0,30]: tahun di anchor masa depan belum dibeli — prorata dari anchor−1 tahun.
+  const pr = prorataDari(setYear(p.dueDateOriginal, p.currentYear - 1))
+  return { ...hasilKosong(), pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
+}
+
+/** PERPANJANGAN (§9.1) — status sudah menyaring, di sini selalu boleh dikenakan. */
+function resolvePerpanjangan(p: DataPeriode, hariIni: Date, tarif: TarifGolongan, pokokBundled: number): HasilBerjalanProrata {
+  const dendaDari = (mulai: Date) => hitungDendaBerjalan(mulai, hariIni, tarif)
+  // Expired, anchor >30 hari lagi: tagih tahun berjalan mulai anniversary terakhir yang lewat.
+  if (p.gapDays > 30) {
+    const d = dendaDari(setYear(p.dueDateOriginal, p.currentYear - 1))
+    return { ...hasilKosong(), pokokBerjalan: pokokBundled, dendaBerjalan: d.denda }
+  }
+  // Gap ≤30 (termasuk hari ini & overdue klasik): tahun berjalan = anchor→anchor+1.
+  const d = dendaDari(p.anchorDate)
+  return { ...hasilKosong(), pokokBerjalan: pokokBundled, dendaBerjalan: d.denda }
+}
+
 function resolveBerjalanDanProrata(
   p: DataPeriode,
-  isKeluar: boolean,
-  isBalikMasuk: boolean,
-  status: string,
+  transaksi: InputHitung['transaksi'],
   hariIni: Date,
   tarif: TarifGolongan,
   pokokBundled: number
-): { pokokBerjalan: number; dendaBerjalan: number; pokokProrata: number; bulanProrata: number } {
-  let pokokBerjalan = 0
-  let dendaBerjalan = 0
-  let pokokProrata = 0
-  let bulanProrata = 0
-  const berjalanMulai = p.anchorDate
-  const caseB = p.gapDays > 30 && p.dueDateOriginal > hariIni
-  const caseA = p.gapDays <= 30
-
-  if (isKeluar) return { pokokBerjalan, dendaBerjalan, pokokProrata, bulanProrata }
-
-  if (caseA) {
-    if (p.gapDays <= 0) {
-      const d = hitungDendaBerjalan(berjalanMulai, hariIni, tarif.tarifPokok, tarif.tarifDendaMaksimal, tarif.konstantaDendaTriwulan)
-      pokokBerjalan = pokokBundled
-      dendaBerjalan = d.denda
-    }
-    if (isBalikMasuk) {
-      const pr = hitungPokokProrata(berjalanMulai, hariIni, tarif.tarifPokok, tarif.kartuDana, tarif.konstantaPokokPerbulan)
-      pokokProrata = pr.pokokProrata
-      bulanProrata = pr.bulanProrata
-    }
-    return { pokokBerjalan, dendaBerjalan, pokokProrata, bulanProrata }
-  }
-
-  if (isBalikMasuk && caseB && status !== 'lunas') {
-    const start = anniversaryProrata(p.dueDateOriginal)
-    const pr = hitungPokokProrata(start, hariIni, tarif.tarifPokok, tarif.kartuDana, tarif.konstantaPokokPerbulan)
-    pokokProrata = pr.pokokProrata
-    bulanProrata = pr.bulanProrata
-  }
-
-  return { pokokBerjalan, dendaBerjalan, pokokProrata, bulanProrata }
+): HasilBerjalanProrata {
+  if (transaksi === 'MUTASI_KELUAR') return hasilKosong()
+  if (transaksi === 'BALIK_NAMA' || transaksi === 'MUTASI_MASUK') return resolveBalikMasuk(p, hariIni, tarif, pokokBundled)
+  return resolvePerpanjangan(p, hariIni, tarif, pokokBundled)
 }
 
 export function hitungPerhitungan(
@@ -103,11 +127,9 @@ export function hitungPerhitungan(
     return { ...buildHasilKosong(p, status, hariIni, input.transaksi, input.dueDateOriginal, keringananAktif), totalPremi: 0 }
   }
 
-  const isKeluar = input.transaksi === 'MUTASI_KELUAR'
-  const isBalikMasuk = input.transaksi === 'BALIK_NAMA' || input.transaksi === 'MUTASI_MASUK'
   const pokokBundled = tarif.tarifPokok + tarif.kartuDana
   const { t1, t2, t3, t4 } = buildTunggakanSlots(p.tunggakanCount, pokokBundled, tarif.tarifDendaMaksimal)
-  const berjalan = resolveBerjalanDanProrata(p, isKeluar, isBalikMasuk, status, hariIni, tarif, pokokBundled)
+  const berjalan = resolveBerjalanDanProrata(p, input.transaksi, hariIni, tarif, pokokBundled)
 
   let d1 = t1.denda
   let d2 = t2.denda
@@ -117,7 +139,7 @@ export function hitungPerhitungan(
   if (keringananAktif) d1 = d2 = d3 = d4 = dB = 0
 
   const r = buildHasilKosong(p, status, hariIni, input.transaksi, input.dueDateOriginal, keringananAktif)
-  r.keterlambatan = formatKeterlambatan(p.tunggakanCount, p.anchorDate, hariIni)
+  r.keterlambatan = formatKeterlambatan(input.dueDateOriginal, hariIni)
   r.pokokBerjalan = berjalan.pokokBerjalan
   r.dendaBerjalan = dB
   r.pokokTunggakan1 = t1.pokok

@@ -2,14 +2,14 @@
 
 Kalkulator estimasi tarif SWDKLLJ Jasa Raharja: premi berjalan, denda, dan tunggakan hingga 5 tahun. PWA offline-first, installable, tanpa backend.
 
-> Tarif dasar mengacu pada **PMK No. 16/PMK.010/2017** · denda 25% per tahun keterlambatan. Hasil bersifat estimasi — penetapan resmi mengikuti ketentuan Samsat & Jasa Raharja.
+> Tarif dasar mengacu pada **PMK No. 16/PMK.010/2017** · denda berjenjang 25%/50%/75%/100% dari pokok (maks Rp100.000). Hasil bersifat estimasi — penetapan resmi mengikuti ketentuan Samsat & Jasa Raharja.
 
 ## Fitur
 
 - **3-card flow**: Transaksi → Data Kendaraan → Hasil Perhitungan (progressive disclosure)
 - **4 jenis transaksi**: Perpanjangan / Pengesahan, Balik Nama, Mutasi Masuk, Mutasi Keluar
 - **Tarif read-only dari CSV** (40 baris, `kode_transaksi × jenis × fungsi × kategori CC`) — fail-closed jika CSV rusak
-- **Perhitungan**: floor −30 hari, cap 5 tahun (1825/1826 hari), premi Berjalan + Tunggakan 1–4, denda pro-rata 25%/tahun
+- **Perhitungan**: floor −30 hari, cap 5 tahun (1825/1826 hari), premi Berjalan + Tunggakan 1–4, denda berjenjang PMK 16/2017 (25%/50%/75%/100% dari pokok, maks Rp100.000)
 - **Keringanan denda**: scaffolding admin (login online-only) — toggle `keringanan_aktif` nol-kan 100% denda global via Firebase Remote Config (lazy-load, `VITE_FEATURE_ADMIN`)
 - **PWA**: `standalone`, precache shell, network-first navigations / cache-first assets, `lang: id`
 
