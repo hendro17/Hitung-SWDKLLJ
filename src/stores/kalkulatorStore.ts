@@ -5,7 +5,7 @@ import type { Golongan, HasilPerhitungan, KendaraanInput, KodeTransaksi, Pilihan
 import { hitungPerhitungan } from '../domain/hitung'
 import { useTarifStore } from './tarifStore'
 import { defaultPilihanCc, konfirmasiGolongan } from '../domain/denda'
-import { applyKeringananSelective } from '../domain/keringanan'
+import { applyKeringananSelective, DASAR_JENDELA_HARI, normalizeHariTambahan } from '../domain/keringanan'
 import { useAdminStore } from './adminStore'
 
 export const useKalkulatorStore = defineStore('kalkulator', () => {
@@ -62,6 +62,8 @@ export const useKalkulatorStore = defineStore('kalkulator', () => {
     if (!tarifStore.tariffAvailable) return
     const tarif = tarifStore.records.find((r) => r.golongan === input.value.golongan)
     if (!tarif) return
+    const doc = adminStore.selectedKeringanan
+    const windowDays = doc ? DASAR_JENDELA_HARI + normalizeHariTambahan(doc.hariTambahan) : DASAR_JENDELA_HARI
     const base = hitungPerhitungan(
       {
         transaksi: transaksi.value,
@@ -71,9 +73,8 @@ export const useKalkulatorStore = defineStore('kalkulator', () => {
       },
       tarif,
       hariIni,
-      false
+      { keringananAktif: false, windowDays }
     )
-    const doc = adminStore.selectedKeringanan
     hasil.value = doc ? applyKeringananSelective(base, doc) : base
     step.value = 3
   }

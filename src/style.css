@@ -17,6 +17,7 @@
   --color-cyan: oklch(0.8 0.15 195);
   --color-cyan-ink: oklch(0.52 0.16 200);
   --color-warn: oklch(0.55 0.18 27);
+  --color-danger: oklch(0.577 0.245 27.325);
 
   --radius-card: 1.5rem;
   --radius-ctrl: 1rem;
@@ -46,6 +47,7 @@
   --color-mu: oklch(0.71 0.02 240);
   --color-line: oklch(0.33 0.03 250);
   --color-warn: oklch(0.72 0.15 24);
+  --color-danger: oklch(0.704 0.191 22.216);
 }
 
 html {

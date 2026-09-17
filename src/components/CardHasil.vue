@@ -19,6 +19,10 @@
         <dt class="text-mu">Keterlambatan</dt>
         <dd class="font-semibold text-warn">{{ store.hasil.keterlambatan }}</dd>
       </div>
+      <div v-if="store.hasil.pokokYad > 0" data-testid="row-pokok-yad" class="flex items-center justify-between gap-4 py-2">
+        <dt class="text-mu">Pokok YAD</dt>
+        <dd>{{ formatUang(store.hasil.pokokYad) }}</dd>
+      </div>
       <div class="flex items-center justify-between gap-4 py-2">
         <dt class="text-mu">Pokok berjalan</dt>
         <dd>{{ formatUang(store.hasil.pokokBerjalan) }}</dd>

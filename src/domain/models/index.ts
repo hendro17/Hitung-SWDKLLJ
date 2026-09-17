@@ -16,10 +16,10 @@ const models: Record<KodeTransaksi, CalculationModel> = {
 export { modelPerpanjangan, modelBalikNama, modelMutasiMasuk, modelMutasiKeluar }
 export type { CalculationModel }
 
-export function hitungJatuhTempoSelanjutnya(transaksi: KodeTransaksi, dueDateOriginal: Date, hariIni: Date): Date {
-  return models[transaksi].hitungJatuhTempoSelanjutnya(dueDateOriginal, hariIni)
+export function hitungJatuhTempoSelanjutnya(transaksi: KodeTransaksi, dueDateOriginal: Date, hariIni: Date, windowDays = 30): Date {
+  return models[transaksi].hitungJatuhTempoSelanjutnya(dueDateOriginal, hariIni, windowDays)
 }
 
-export function tentukanStatus(transaksi: KodeTransaksi, dueDateOriginal: Date, hariIni: Date) {
-  return models[transaksi].tentukanStatus(dueDateOriginal, hariIni)
+export function tentukanStatus(transaksi: KodeTransaksi, dueDateOriginal: Date, hariIni: Date, windowDays = 30) {
+  return models[transaksi].tentukanStatus(dueDateOriginal, hariIni, windowDays)
 }
