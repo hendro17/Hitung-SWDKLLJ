@@ -54,6 +54,8 @@ export interface HasilPerhitungan {
   pokokTunggakan4: number
   dendaTunggakan4: number
   pokokProrata: number
+  /** Pokok YAD: 1 tahun penuh anchor→anchor+1 utk tunggakan + anchor ∈ (30, windowDays], PERPANJANGAN saja */
+  pokokYad: number
   /** Jumlah bulan prorata (hanya BALIK_NAMA/MUTASI_MASUK; 0 selainnya) */
   bulanProrata: number
   totalPremi: number

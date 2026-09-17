@@ -122,3 +122,29 @@ describe('applyKeringananSelective — 8 bool per-slot', () => {
     expect(r.totalPremi).toBe(0)
   })
 })
+
+describe('keringanan — badge condition + multi-provisi', () => {
+  it('badge aktif hanya bila doc terpilih != null && aktif', () => {
+    const today = new Date(2026, 8, 15)
+    const aktif = doc({ mulai: '2026-09-01', akhir: '2026-09-30' })
+    const expired = doc({ id: 'k2', mulai: '2026-07-01', akhir: '2026-07-31' })
+    const badge = (selected: KeringananDoc | null) =>
+      selected != null && isKeringananAktif(selected, today)
+    expect(badge(aktif)).toBe(true)
+    expect(badge(expired)).toBe(false)
+    expect(badge(null)).toBe(false)
+  })
+  it('multi-provisi: exclusive satu ON, apply tidak crash', () => {
+    const h = hasil()
+    const list = [
+      doc({ id: 'p1', dendaTunggakan1: true, mulai: '2026-01-01', akhir: '2026-12-31' }),
+      doc({ id: 'p2', pokokTunggakan2: true, mulai: '2026-01-01', akhir: '2026-12-31' }),
+    ]
+    const activeId: string | null = 'p2'
+    const selected = list.find((d) => d.id === activeId) ?? null
+    const r = applyKeringananSelective(h, selected)
+    expect(r.pokokTunggakan2).toBe(0)
+    expect(r.dendaTunggakan1).toBe(h.dendaTunggakan1)
+    expect(r.keringananDiterapkan).toBe(true)
+  })
+})

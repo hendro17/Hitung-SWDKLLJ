@@ -98,7 +98,7 @@ describe('CardHasil string keterlambatan & batas tunggakan (T045/US3)', () => {
       { transaksi: 'PERPANJANGAN', dueDateOriginal: new Date(2024, 4, 26), golongan: 'C1' },
       C1,
       HARI_INI,
-      false
+      { keringananAktif: false }
     )
     expect(r.status).toBe('rincian')
     expect(r.keterlambatan).toBe('2 tahun, 3 bulan, 1 hari')

@@ -29,7 +29,7 @@ function hitung(
   keringananAktif = false
 ): HasilPerhitungan {
   const input: InputHitung = { transaksi, dueDateOriginal: due, golongan }
-  return hitungPerhitungan(input, tarifOf(golongan), hariIni, keringananAktif)
+  return hitungPerhitungan(input, tarifOf(golongan), hariIni, { keringananAktif })
 }
 
 describe('hitungPerhitungan — contoh terverifikasi EKSAK (domain-api §6)', () => {

@@ -15,8 +15,19 @@ export interface KeringananDoc {
   pokokTunggakan4: boolean
   dendaTunggakan4: boolean
   createdBy: string
+  /** Hari tambahan kebijakan DI ATAS 30 hari dasar; opsional (dok lama → default 30) */
+  hariTambahan?: number
   updatedAt?: unknown
   updatedBy?: string
+}
+
+/** Jendela dasar hari (30) — windowDays = DASAR + normalizeHariTambahan(doc) bila ada doc */
+export const DASAR_JENDELA_HARI = 30
+
+/** normalizeHariTambahan — satu sumber default: undefined/NaN (dok lama) → 30; nilai eksplisit ≥0, floor desimal */
+export function normalizeHariTambahan(v: number | undefined | null): number {
+  if (v === undefined || v === null || Number.isNaN(v)) return 30
+  return Math.max(0, Math.floor(v))
 }
 
 function parseLocalDate(s: string): Date {
@@ -70,9 +81,10 @@ export function applyKeringananSelective(hasil: HasilPerhitungan, doc: Keringana
   // dendaBerjalan tidak termasuk selective 8 bool — tetap normal (semua denda lama dihapus; kini per-slot)
   if (changed) {
     r.keringananDiterapkan = true
+    r.pokokYad ??= 0
     r.totalPremi =
       r.pokokBerjalan + r.dendaBerjalan + r.pokokTunggakan1 + r.dendaTunggakan1 + r.pokokTunggakan2 + r.dendaTunggakan2 +
-      r.pokokTunggakan3 + r.dendaTunggakan3 + r.pokokTunggakan4 + r.dendaTunggakan4 + r.pokokProrata
+      r.pokokTunggakan3 + r.dendaTunggakan3 + r.pokokTunggakan4 + r.dendaTunggakan4 + r.pokokProrata + r.pokokYad
     // lunas status tetap 0
     if (r.status === 'lunas') r.totalPremi = 0
   }
