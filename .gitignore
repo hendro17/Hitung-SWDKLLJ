@@ -32,3 +32,6 @@ playwright-report/
 
 # Misc
 .opencode/
+
+test-results/
+playwright-report/
