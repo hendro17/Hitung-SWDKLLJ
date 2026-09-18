@@ -4,6 +4,7 @@ import AppSidebar from './components/AppSidebar.vue'
 import AppNavbar from './components/AppNavbar.vue'
 import { Toaster } from 'vue-sonner'
 import { Analytics } from '@vercel/analytics/vue'
+import { SpeedInsights } from '@vercel/speed-insights/vue'
 import { useKeringanan } from './composables/useKeringanan'
 
 const sidebarOpen = ref(false)
@@ -34,4 +35,5 @@ provide('openSidebar', openSidebar)
   </div>
   <Toaster position="bottom-right" richColors />
   <Analytics />
+  <SpeedInsights />
 </template>
