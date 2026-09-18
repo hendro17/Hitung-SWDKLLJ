@@ -135,14 +135,14 @@ Aturan umum:
 - **Case B** (`dueDateOriginal > hariIni`, tunggakanCount 0):
   - `dueDateOriginal > hariIni + 1 tahun` → `status: 'lunas'`, total 0.
   - Selain itu → prorata dihitung dari `anniversary_terakhir_yang_lewat` sampai `hariIni`.
-  - ⚠️ **ASUMSI PENDING-VALIDASI (§13.1)**: `anniversary_terakhir_yang_lewat = dueDateOriginal − 1 tahun` — definisi ini belum divalidasi dengan contoh angka oleh user. Unit test wajib memakai nilai asumsi ini dan membawa marker `pending-validasi` jelas; JANGAN dipasarkan sebagai perilaku final.
+  - ✅ **TERVALIDASI §13.1 (2026-09-18, business-logic §13.4)**: `anniversary_terakhir_yang_lewat = dueDateOriginal − 1 tahun` — contoh user: due 10 Nov 2026/hari 18 Sep 2026 → 10 bulan prorata, JTS 18 Sep 2027; due 10 Okt 2027 → lunas.
 
 ### 6.3 MUTASI_KELUAR — business-logic.md §9.3
 
 - Pokok/Denda Berjalan = 0 **selalu**, tanpa prorata.
 - Hanya komponen tunggakan 1..tunggakanCount.
 - JTS = `anchorDate`. Contoh verifikasi: C1, jatuh tempo 26 Mei 2024, hari ini 27 Agustus 2026 → 2 × (32.000 + 32.000) + kartu 3.000 = **131.000**, JTS 26 Mei 2026.
-- ⚠️ **ASUMSI PENDING-VALIDASI (§13.2)**: bila `tunggakanCount === 0`, JTS tetap `anchorDate` — belum dikonfirmasi user. Unit test wajib marker `pending-validasi`.
+- ✅ **TERVALIDASI §13.2 (2026-09-18, business-logic §13.4)**: bila `tunggakanCount === 0`, JTS tetap `anchorDate`; selisih due→hari < 365 hari → total 0 (cth user: due 10 Jan 2026 → 0, JTS = due; due 10 Jan 2025 → tunggakan1 35.000 + denda 32.000).
 
 ## 7. Wajib Uji (Constitution III — test-first)
 
@@ -155,7 +155,7 @@ Aturan umum:
 7. `konfirmasiGolongan`: pilihan `'atas'`/`'bawah'` memindahkan golongan dalam family (C1↔C2, DU↔EU, DP↔F); family `null` atau pilihan `null` tidak pernah mengubah golongan; pilihan default turunan `default_cc` (> batas family) mereproduksi golongan terpilih untuk seluruh 9 baris (fixture csv-tarif §1).
 8. Sampling SC-003: keempat transaksi × 9 golongan pada data periode yang sama, hasil konsisten dengan kontrak (tarif identik, alur berbeda).
 9. Keringanan aktif vs non-aktif: semua denda menjadi 0 saat aktif, pokok tidak berubah.
-10. Seluruh jalur asumsi §13.1 dan §13.2 ditandai `pending-validasi` dan didokumentasikan di komentar test.
+10. Jalur §13.1 dan §13.2 tervalidasi contoh angka user 2026-09-18 (business-logic §13.4) — marker `pending-validasi` dihapus.
 
 ## 8. Changelog Kontrak
 

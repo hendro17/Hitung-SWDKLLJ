@@ -45,7 +45,7 @@ Kalkulator premi SWDKLLJ Jasa Raharja sebagai PWA Vue 3 yang dapat dipasang dan 
 |---|---|---|
 | I. Vue 3 Composition API First | ✅ PASS | Seluruh komponen baru `<script setup>`; logika reusable → composable `useTheme`, `usePwaInstall`, `useTarif`. Options API dilarang. |
 | II. Pinia Satu Sumber Kebenaran | ✅ PASS | 3 store setup-style: `tarifStore`, `kalkulatorStore` (state machine card + input), `adminStore`. Perhitungan = action/getter murni yang memanggil modul `domain/` dan dapat diuji terpisah dari UI. |
-| III. Akurasi Perhitungan (NON-NEGOTIABLE) | ✅ PASS | Unit test ditulis lebih dulu untuk semua aturan tarif/batas (3 contoh terverifikasi business-logic §9 + wajib-uji domain-api §7). Tarif terpusat di `src/data/tarif-swdkllj.csv` bersumber PMK No. 36/PMK.010/2008 (business-logic.md); parser memvalidasi skema fail-closed; gagal muat → blokir Hitung (FR-008). Tidak ada angka hardcode tersebar. 3 open validation (§13) wajib ditandai pending-validasi, bukan diasumsikan final. |
+| III. Akurasi Perhitungan (NON-NEGOTIABLE) | ✅ PASS | Unit test ditulis lebih dulu untuk semua aturan tarif/batas (3 contoh terverifikasi business-logic §9 + wajib-uji domain-api §7). Tarif terpusat di `src/data/tarif-swdkllj.csv` bersumber PMK No. 36/PMK.010/2008 (business-logic.md); parser memvalidasi skema fail-closed; gagal muat → blokir Hitung (FR-008). Tidak ada angka hardcode tersebar. 3 open validation (§13) ditandai pending-validasi hingga DITUTUP 2026-09-18 via business-logic §13.4 (contoh angka user). |
 | IV. PWA Installable & Offline-First | ✅ PASS | Manifest lengkap (nama `Hitung SWDKLLJ Jasa Raharja` per konstitusi; label tampilan lain mengikuti Open Design), `display: standalone`, ikon dari Open Design. Precache aset + runtime caching mengikuti strategi prototype Open Design (network-first navigasi, cache-first aset, SWR sekunder). Pembaruan aman versi lewat precache manifest Workbox. |
 | V. Kesederhanaan & UX Bahasa Indonesia | ✅ PASS | Tanpa framework komponen UI tambahan; Tailwind CSS adalah utility styling (bukan library komponen) dan WAJIB sesuai penetapan pengguna 2026-08-23 — sekaligus sejalan FR-014 karena desain Open Design memang berbasis Tailwind. Alur 3 langkah, label Indonesia eksak dari Open Design. |
 
@@ -114,9 +114,9 @@ hitung-swdkllj/
 │   │   ├── denda.ts               # roundMoney + hitungDendaBerjalan triwulan tanpa grace + hitungPokokProrata (§2, §4–§5)
 │   │   ├── models/                # CalculationModel JTS per modul transaksi (FR-007, domain-api §6)
 │   │   │   ├── perpanjangan.ts    #   gap>30 → anchorDate, else SET_YEAR(due,y+1)
-│   │   │   ├── balik-nama.ts      #   Case A → hariIni+1tahun; Case B lunas/prorata (asumsi §13.1)
+│   │   │   ├── balik-nama.ts      #   Case A → hariIni+1tahun; Case B lunas/prorata (tervalidasi §13.1 2026-09-18)
 │   │   │   ├── mutasi-masuk.ts    #   identik balik-nama 100%
-│   │   │   └── mutasi-keluar.ts   #   JTS = anchorDate selalu (asumsi §13.2)
+│   │   │   └── mutasi-keluar.ts   #   JTS = anchorDate selalu (tervalidasi §13.2 2026-09-18)
 │   │   └── hitung.ts              # hitungPerhitungan() orkestrator per modul + applyKeringanan()
 │   ├── data/
 │   │   └── tarif-swdkllj.csv      # SATU-SATUNYA sumber angka tarif (PMK 36/PMK.010/2008, 9 golongan)
@@ -141,7 +141,7 @@ hitung-swdkllj/
 │   │   ├── keringanan.spec.ts     # SC-006 denda→0 saat periode aktif; normal bila lewat tanggalAkhir
 │   │   ├── keringanan-selective.spec.ts # 8 bool pokok/denda 1-4 → 0 / 'keringanan'
 │   │   ├── admin-token.spec.ts     # sha256Hex, generate sk-*, status active/revoked/expired
-│   │   └── models/*.spec.ts       # JTS per modul (domain-api §6, incl. marker pending-validasi §13.1/§13.2)
+│   │   └── models/*.spec.ts       # JTS per modul (domain-api §6, §13.1/§13.2 tervalidasi 2026-09-18)
 │   └── components/                # Smoke: visibilitas card, validasi, reset (US1-US2)
 ├── e2e/                           # (opsional, Playwright) alur end-to-end offline
 ├── index.html / vite.config.ts / tailwind config via CSS @theme / tsconfig.json / package.json

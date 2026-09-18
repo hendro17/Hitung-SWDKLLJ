@@ -54,12 +54,13 @@ describe('JTS overdue anchor>30 & boundary 30/31', () => {
   })
 })
 
-// ⚠️ OPEN VALIDATION (business-logic §13.2) — ASUMSI, BUKAN FINAL.
-describe('pending-validasi §13.2 — MUTASI_KELUAR tunggakanCount=0 (asumsi JTS = anchorDate)', () => {
-  // Asumsi terdokumentasi: bila tidak ada tunggakan sama sekali, JTS tetap anchorDate.
-  // Belum dikonfirmasi user; JANGAN dipasarkan sebagai perilaku final.
-  it('due tanpa tunggakan → JTS tetap anchorDate', () => {
-    const due = new Date(2026, 9, 6)
-    expect(jts('MUTASI_KELUAR', due)).toEqual(due)
+// ✅ TERVALIDASI 2026-09-18 (business-logic §13.2 CLOSED) — contoh angka user.
+describe('§13.2 TERVALIDASI — MUTASI_KELUAR JTS = anchorDate', () => {
+  const HARI = new Date(2026, 8, 18) // 18 Sep 2026
+  it('tanpa tunggakan (due 10 Jan 2026) → JTS tetap due', () => {
+    expect(jts('MUTASI_KELUAR', new Date(2026, 0, 10), HARI)).toEqual(new Date(2026, 0, 10))
+  })
+  it('1 tunggakan (due 10 Jan 2025) → JTS = anchor 10 Jan 2026', () => {
+    expect(jts('MUTASI_KELUAR', new Date(2025, 0, 10), HARI)).toEqual(new Date(2026, 0, 10))
   })
 })
