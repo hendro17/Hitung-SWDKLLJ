@@ -21,7 +21,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'favicon-16x16.png', 'favicon-32x32.png', 'apple-touch-icon.png', 'android-chrome-192x192.png', 'android-chrome-512x512.png'],
       manifest: {
         name: 'Hitung SWDKLLJ Jasa Raharja',
         short_name: 'Hitung SWDKLLJ',
@@ -33,7 +33,9 @@ export default defineConfig({
         start_url: '/',
         icons: [
           { src: '/icon-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
+          { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }
         ]
       },
       workbox: {
@@ -81,6 +83,8 @@ export default defineConfig({
         'src/services/**',
         'src/components/AppBreadcrumb.vue',
         'src/components/AppSidebar.vue',
+        'src/components/DataLoading.vue',
+        'src/components/ui/**',
         'src/composables/useKeringanan.ts',
         'src/composables/usePwaInstall.ts',
         'src/stores/superAdminStore.ts',

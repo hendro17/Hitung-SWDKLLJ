@@ -2,12 +2,10 @@
   <nav class="sticky top-0 z-10 border-b border-line bg-app/90 backdrop-blur">
     <div class="mx-auto flex max-w-[30rem] items-center gap-3 px-4 py-3">
       <button type="button" aria-label="Buka menu" :aria-expanded="!!openSidebar" aria-controls="app-sidebar" class="flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink" @click="openSidebar?.()">☰</button>
-      <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-cyan text-white shadow-card" aria-hidden="true">
-        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      </div>
+      <picture class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-soft ring-2 ring-brand/40">
+        <source srcset="/jr_new_logo.webp" type="image/webp" />
+        <img src="/jr_new_logo.png" alt="Logo Jasa Raharja" class="h-9 w-9 object-contain" />
+      </picture>
       <div class="min-w-0 flex-1">
         <p class="truncate text-base font-extrabold leading-tight text-ink">Hitung SWDKLLJ</p>
         <p class="truncate text-xs font-medium text-mu">Kalkulator Jasa Raharja</p>

@@ -13,12 +13,12 @@ service cloud.firestore {
     }
 
     // admin_tokens: GET by hash boleh (admin verify via SHA256 lookup)
-    // LIST/CREATE/UPDATE hanya super admin; DELETE never; hash 256-bit unguessable
+    // LIST/CREATE/UPDATE/DELETE hanya super admin; hash 256-bit unguessable
     match /admin_tokens/{hash} {
       allow get: if true;
       allow list: if isSuperAdmin();
       allow create, update: if isSuperAdmin();
-      allow delete: if false;
+      allow delete: if isSuperAdmin();
     }
 
     // keringanan: semua boleh read (public butuh list untuk sidebar)

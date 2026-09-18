@@ -18,33 +18,29 @@
       Data tarif tidak tersedia — muat ulang atau perbarui aplikasi
     </p>
 
-    <form class="mt-4 space-y-4" @submit.prevent="store.hitung()">
+    <form class="mt-4 space-y-4" @submit.prevent="onHitung">
       <div>
         <label for="tanggal" class="block text-sm font-semibold text-ink">Tanggal jatuh tempo</label>
-        <input
-          id="tanggal"
-          type="date"
-          class="mt-1 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-ink focus:outline-none focus:ring-2 focus:ring-brand"
-          :value="tanggalStr"
-          @input="onTanggal"
-        />
+        <div class="mt-2">
+          <DatePicker id="tanggal" v-model="tanggalModel" placeholder="Pilih tanggal jatuh tempo" />
+        </div>
       </div>
 
       <div>
         <label for="jenis" class="block text-sm font-semibold text-ink">Jenis kendaraan</label>
-        <select
-          id="jenis"
-          class="mt-1 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-ink focus:outline-none focus:ring-2 focus:ring-brand"
-          v-model="golonganModel"
-        >
-          <option value="" disabled>Pilih jenis kendaraan…</option>
-          <option v-for="r in tarifStore.records" :key="r.golongan" :value="r.golongan">{{ r.deskripsi }}</option>
-        </select>
+        <div class="mt-2">
+          <AppSelect
+            id="jenis"
+            v-model="golonganModel"
+            :options="golonganOptions"
+            placeholder="Pilih jenis kendaraan…"
+          />
+        </div>
       </div>
 
       <fieldset v-if="radioBatas !== null">
         <legend class="text-sm font-semibold text-ink">CC mesin</legend>
-        <div class="mt-1 flex gap-2">
+        <div class="mt-2 flex gap-2">
           <label
             v-for="(o, oi) in OPSI_RADIO"
             :key="oi"
@@ -69,7 +65,7 @@
           type="submit"
           class="w-full rounded-2xl bg-brand-strong px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
           :disabled="!bolehHitung"
-          @click="store.hitung()"
+          @click="onHitung"
         >
           Hitung Premi SWDKLLJ
         </button>
@@ -80,8 +76,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 import BaseCard from './BaseCard.vue'
+import AppSelect from './ui/AppSelect.vue'
+import DatePicker from './ui/DatePicker.vue'
 import { useKalkulatorStore } from '../stores/kalkulatorStore'
 import { useTarifStore } from '../stores/tarifStore'
 import { batasFamily, familyGolongan } from '../domain/denda'
@@ -102,24 +100,27 @@ const OPSI_RADIO = computed(() => {
   return opsi
 })
 
-const tanggalStr = computed(() => {
-  const t = store.input.tanggalJatuhTempo
+const golonganOptions = computed(() =>
+  tarifStore.records.map((r) => ({ value: r.golongan, label: r.deskripsi }))
+)
+
+function toIso(t: Date | null): string {
   if (!t) return ''
   const p = (n: number) => String(n).padStart(2, '0')
   return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`
+}
+
+const tanggalModel = computed({
+  get: () => toIso(store.input.tanggalJatuhTempo),
+  set: (v: string) => store.setTanggal(v ? parseTanggal(v) : null),
 })
 
-const golonganModel = computed<Golongan | ''>({
+const golonganModel = computed<string>({
   get: () => store.input.golongan ?? '',
   set: (v) => {
     if (v) store.pilihGolongan(v as Golongan)
   }
 })
-
-function onTanggal(e: Event) {
-  const v = (e.target as HTMLInputElement).value
-  store.setTanggal(v ? parseTanggal(v) : null)
-}
 
 function parseTanggal(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number)
@@ -129,4 +130,21 @@ function parseTanggal(iso: string): Date {
 const bolehHitung = computed(
   () => tarifStore.tariffAvailable && store.input.golongan !== null && store.input.tanggalJatuhTempo !== null
 )
+
+function focusCard(testid: string) {
+  const el = document.querySelector(`[data-testid="${testid}"]`) as HTMLElement | null
+  if (!el) return
+  const reduced =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : true
+  el.scrollIntoView?.({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+  el.focus({ preventScroll: true })
+}
+
+async function onHitung() {
+  store.hitung()
+  await nextTick()
+  if (store.step >= 3) focusCard('card-hasil')
+}
 </script>
