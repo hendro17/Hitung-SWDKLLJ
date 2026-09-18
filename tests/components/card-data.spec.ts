@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import CardDataKendaraan from '../../src/components/CardDataKendaraan.vue'
+import AppSelect from '../../src/components/ui/AppSelect.vue'
+import DatePicker from '../../src/components/ui/DatePicker.vue'
 import { useTarifStore } from '../../src/stores/tarifStore'
 import { useKalkulatorStore } from '../../src/stores/kalkulatorStore'
 import type { TarifGolongan } from '../../src/domain/types'
@@ -27,27 +29,52 @@ async function mountReady(): Promise<ReturnType<typeof mount>> {
   return mount(CardDataKendaraan)
 }
 
+async function pilihGolongan(wrapper: ReturnType<typeof mount>, v: string) {
+  await wrapper.findComponent(AppSelect).vm.$emit('update:modelValue', v)
+  await wrapper.vm.$nextTick()
+}
+
+async function isiTanggal(wrapper: ReturnType<typeof mount>, iso: string) {
+  await wrapper.findComponent(DatePicker).vm.$emit('update:modelValue', iso)
+  await wrapper.vm.$nextTick()
+}
+
 describe('CardDataKendaraan (T027 — ui-components §3, domain-api §1)', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
   it('dropdown jenis kendaraan dirender dari tarifStore: 9 opsi = kolom deskripsi', async () => {
     const wrapper = await mountReady()
-    const all = wrapper.findAll('select option')
-    expect(all).toHaveLength(10) // placeholder + 9 data
-    expect(all[0].text()).toBe('Pilih jenis kendaraan…')
-    const options = all.slice(1)
+    const sel = wrapper.findComponent(AppSelect)
+    expect(sel.exists()).toBe(true)
+    expect(sel.props('placeholder')).toBe('Pilih jenis kendaraan…')
+    expect(sel.props('id')).toBe('jenis')
+    const options = sel.props('options') as { value: string; label: string }[]
     expect(options).toHaveLength(9)
-    const text = options.map((o) => o.text())
-    expect(text).toContain('Sepeda Motor Roda 2 / Roda 3')
-    expect(text).toContain('Kendaraan Khusus (Ambulance, Damkar, dsb)')
-    expect(text).toContain('Minibus, Jeep, Sedan, Pickup Ang. Barang')
-    expect(options.map((o) => o.attributes('value'))).toEqual(['A', 'B', 'C1', 'C2', 'DP', 'DU', 'EP', 'EU', 'F'])
+    expect(options.map((o) => o.label)).toContain('Sepeda Motor Roda 2 / Roda 3')
+    expect(options.map((o) => o.label)).toContain('Kendaraan Khusus (Ambulance, Damkar, dsb)')
+    expect(options.map((o) => o.label)).toContain('Minibus, Jeep, Sedan, Pickup Ang. Barang')
+    expect(options.map((o) => o.value)).toEqual(['A', 'B', 'C1', 'C2', 'DP', 'DU', 'EP', 'EU', 'F'])
+    expect(wrapper.find('label[for="jenis"]').exists()).toBe(true)
+  })
+
+  it('DatePicker terikat ke store via string YYYY-MM-DD; label for="tanggal" terjaga', async () => {
+    const wrapper = await mountReady()
+    const dp = wrapper.findComponent(DatePicker)
+    expect(dp.exists()).toBe(true)
+    expect(wrapper.find('label[for="tanggal"]').exists()).toBe(true)
+    // default = hari ini (bukan placeholder kosong)
+    const t = new Date()
+    const p = (n: number) => String(n).padStart(2, '0')
+    expect(dp.props('modelValue')).toBe(`${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`)
+    await isiTanggal(wrapper, '2024-05-26')
+    const store = useKalkulatorStore()
+    expect(store.input.tanggalJatuhTempo).toBeInstanceOf(Date)
+    expect(dp.props('modelValue')).toBe('2024-05-26')
   })
 
   it('radio CC dinamis per family + prefill default_cc; memilih radio adjust golongan via konfirmasiGolongan', async () => {
     const wrapper = await mountReady()
-    const select = wrapper.find('select')
-    await select.setValue('C1') // motor
+    await pilihGolongan(wrapper, 'C1') // motor
     const radios = wrapper.findAll('input[type="radio"]')
     expect(radios).toHaveLength(2)
     expect(radios.map((r) => r.attributes('value'))).toEqual(['bawah', 'atas'])
@@ -65,24 +92,29 @@ describe('CardDataKendaraan (T027 — ui-components §3, domain-api §1)', () =>
   it('radio OPSIONAL — tombol Hitung tetap enabled tanpa interaksi radio', async () => {
     const store = useKalkulatorStore()
     const wrapper = await mountReady()
-    await wrapper.find('select').setValue('C1')
+    await pilihGolongan(wrapper, 'C1')
     // radio dibiarkan prefill (tidak wajib disentuh)
-    await wrapper.find('input[type="date"]').setValue('2024-05-26')
+    await isiTanggal(wrapper, '2024-05-26')
     const btn = wrapper.find('button[type="submit"]')
     expect(btn.attributes('disabled')).toBeUndefined()
     // golongan hasil prefill default = C1 (defaultCc 150 → bawah)
     expect(store.input.golongan).toBe('C1')
   })
 
-  it('disabled saat tanggal invalid / golongan belum dipilih; enabled saat keduanya ada', async () => {
+  it('disabled saat golongan belum dipilih / tanggal dikosongkan; enabled saat keduanya ada', async () => {
     const wrapper = await mountReady()
+    const store = useKalkulatorStore()
     const btn = wrapper.find('button[type="submit"]')
-    expect(btn.attributes('disabled')).toBeDefined() // tanggal & golongan kosong
+    expect(btn.attributes('disabled')).toBeDefined() // golongan kosong (tanggal default hari ini)
 
-    await wrapper.find('select').setValue('C1')
-    expect(btn.attributes('disabled')).toBeDefined() // tanggal masih kosong
+    await pilihGolongan(wrapper, 'C1')
+    expect(btn.attributes('disabled')).toBeUndefined() // tanggal default hari ini + golongan ada
 
-    await wrapper.find('input[type="date"]').setValue('2024-05-26')
+    store.setTanggal(null)
+    await wrapper.vm.$nextTick()
+    expect(btn.attributes('disabled')).toBeDefined() // tanggal dikosongkan
+
+    await isiTanggal(wrapper, '2024-05-26')
     expect(btn.attributes('disabled')).toBeUndefined()
   })
 
@@ -98,7 +130,7 @@ describe('CardDataKendaraan (T027 — ui-components §3, domain-api §1)', () =>
 
   it('family null (A/B/EP/EU-bus) tanpa radio', async () => {
     const wrapper = await mountReady()
-    await wrapper.find('select').setValue('EP')
+    await pilihGolongan(wrapper, 'EP')
     expect(wrapper.findAll('input[type="radio"]')).toHaveLength(0)
   })
 

@@ -3,6 +3,8 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import HomeView from '../../src/views/HomeView.vue'
 import StepIndicator from '../../src/components/StepIndicator.vue'
+import AppSelect from '../../src/components/ui/AppSelect.vue'
+import DatePicker from '../../src/components/ui/DatePicker.vue'
 import { useTarifStore } from '../../src/stores/tarifStore'
 import { useKalkulatorStore } from '../../src/stores/kalkulatorStore'
 import type { TarifGolongan } from '../../src/domain/types'
@@ -47,6 +49,17 @@ const card1 = (w: ReturnType<typeof mount>) => w.find('[data-testid="card-transa
 const card2 = (w: ReturnType<typeof mount>) => w.find('[data-testid="card-data"]')
 const card3 = (w: ReturnType<typeof mount>) => w.find('[data-testid="card-hasil"]')
 
+async function pilihTransaksi(w: ReturnType<typeof mount>, v: string) {
+  await card1(w).findComponent(AppSelect).vm.$emit('update:modelValue', v)
+  await w.vm.$nextTick()
+}
+
+async function isiCard2(w: ReturnType<typeof mount>, golongan: string, iso: string) {
+  await card2(w).findComponent(AppSelect).vm.$emit('update:modelValue', golongan)
+  await card2(w).findComponent(DatePicker).vm.$emit('update:modelValue', iso)
+  await w.vm.$nextTick()
+}
+
 describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 & 4)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -61,8 +74,8 @@ describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 
 
   it('Lanjutkan → Card 2 muncul (Card 3 belum); Hitung → Card 3 muncul', async () => {
     const wrapper = await mountHome()
-    await card1(wrapper).find('select').setValue('PERPANJANGAN')
-    await card1(wrapper).find('button').trigger('click')
+    await pilihTransaksi(wrapper, 'PERPANJANGAN')
+    await card1(wrapper).find('button[type="submit"]').trigger('click')
     await wrapper.vm.$nextTick()
     expect(card2(wrapper).isVisible()).toBe(true)
     // ponytail: jangan baca getComputedStyle elemen hidden utk card3 — jsdom latch
@@ -70,8 +83,7 @@ describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 
     // card3 dirender murni via v-show="store.step >= 3", jadi cek store cukup.
     expect(useKalkulatorStore().step).toBe(2)
 
-    await card2(wrapper).find('select').setValue('C1')
-    await card2(wrapper).find('input[type="date"]').setValue('2024-05-26')
+    await isiCard2(wrapper, 'C1', '2024-05-26')
     await card2(wrapper).find('button[type="submit"]').trigger('click')
     await wrapper.vm.$nextTick()
     expect(card3(wrapper).isVisible()).toBe(true)
@@ -81,21 +93,20 @@ describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 
 
   it('ubah transaksi pada step>=2 → seluruh input & hasil ter-reset (FR-003 Option A)', async () => {
     const wrapper = await mountHome()
-    await card1(wrapper).find('select').setValue('PERPANJANGAN')
-    await card1(wrapper).find('button').trigger('click')
-    await card2(wrapper).find('select').setValue('C1')
-    await card2(wrapper).find('input[type="date"]').setValue('2024-05-26')
+    await pilihTransaksi(wrapper, 'PERPANJANGAN')
+    await card1(wrapper).find('button[type="submit"]').trigger('click')
+    await isiCard2(wrapper, 'C1', '2024-05-26')
     await card2(wrapper).find('button[type="submit"]').trigger('click')
     const store = useKalkulatorStore()
     expect(store.step).toBe(3)
     expect(store.hasil).not.toBeNull()
 
-    await card1(wrapper).find('select').setValue('MUTASI_KELUAR')
+    await pilihTransaksi(wrapper, 'MUTASI_KELUAR')
     await wrapper.vm.$nextTick()
     expect(store.step).toBe(1)
     expect(store.hasil).toBeNull()
     expect(store.input.golongan).toBeNull()
-    expect(store.input.tanggalJatuhTempo).toBeNull()
+    expect(store.input.tanggalJatuhTempo?.toDateString()).toBe(new Date().toDateString()) // reset → default hari ini
     expect(store.transaksi).toBe('MUTASI_KELUAR')
     expect(card2(wrapper).isVisible()).toBe(false)
     expect(card3(wrapper).isVisible()).toBe(false)
@@ -105,10 +116,9 @@ describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 
     const wrapper = await mountHome()
     const results: number[] = []
     for (let i = 0; i < 5; i++) {
-      await card1(wrapper).find('select').setValue('PERPANJANGAN')
-      await card1(wrapper).find('button').trigger('click')
-      await card2(wrapper).find('select').setValue('C1')
-      await card2(wrapper).find('input[type="date"]').setValue('2024-05-26')
+      await pilihTransaksi(wrapper, 'PERPANJANGAN')
+      await card1(wrapper).find('button[type="submit"]').trigger('click')
+      await isiCard2(wrapper, 'C1', '2024-05-26')
       await card2(wrapper).find('button[type="submit"]').trigger('click')
       const store = useKalkulatorStore()
       results.push(store.hasil!.totalPremi)
@@ -141,8 +151,8 @@ describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 
 
   it('guard tombol Hitung: field kurang → store.hitung tidak memajukan step', async () => {
     const wrapper = await mountHome()
-    await card1(wrapper).find('select').setValue('PERPANJANGAN')
-    await card1(wrapper).find('button').trigger('click')
+    await pilihTransaksi(wrapper, 'PERPANJANGAN')
+    await card1(wrapper).find('button[type="submit"]').trigger('click')
     const store = useKalkulatorStore()
     // tanpa golongan & tanggal
     await card2(wrapper).find('button[type="submit"]').trigger('click')
@@ -156,10 +166,9 @@ describe('Wizard progressive disclosure (T041 — FR-003, quickstart skenario 2 
     const tarif = useTarifStore()
     tarif.setFailed()
     await wrapper.vm.$nextTick()
-    await card1(wrapper).find('select').setValue('PERPANJANGAN')
-    await card1(wrapper).find('button').trigger('click')
-    await card2(wrapper).find('select').setValue('C1')
-    await card2(wrapper).find('input[type="date"]').setValue('2024-05-26')
+    await pilihTransaksi(wrapper, 'PERPANJANGAN')
+    await card1(wrapper).find('button[type="submit"]').trigger('click')
+    await isiCard2(wrapper, 'C1', '2024-05-26')
     await card2(wrapper).find('button[type="submit"]').trigger('click')
     await wrapper.vm.$nextTick()
     const store = useKalkulatorStore()

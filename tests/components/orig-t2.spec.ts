@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import HomeView from '../../src/views/HomeView.vue'
+import AppSelect from '../../src/components/ui/AppSelect.vue'
+import DatePicker from '../../src/components/ui/DatePicker.vue'
 import { useKalkulatorStore } from '../../src/stores/kalkulatorStore'
 
 const CSV = `golongan,deskripsi,default_cc,kartu_dana,tarif_pokok,tarif_denda_maksimal,konstanta_denda_triwulan,konstanta_pokok_perbulan
@@ -31,13 +33,15 @@ describe('t2', () => {
   beforeEach(() => setActivePinia(createPinia()))
   it('x', async () => {
     const wrapper = await mountHome()
-    await card1(wrapper).find('select').setValue('PERPANJANGAN')
-    await card1(wrapper).find('button').trigger('click')
+    await card1(wrapper).findComponent(AppSelect).vm.$emit('update:modelValue', 'PERPANJANGAN')
+    await wrapper.vm.$nextTick()
+    await card1(wrapper).find('button[type="submit"]').trigger('click')
     await wrapper.vm.$nextTick()
     if (CHECK.includes('c3off')) expect(card3(wrapper).isVisible()).toBe(false)
     if (CHECK.includes('c2on')) expect(card2(wrapper).isVisible()).toBe(true)
-    await card2(wrapper).find('select').setValue('C1')
-    await card2(wrapper).find('input[type="date"]').setValue('2024-05-26')
+    await card2(wrapper).findComponent(AppSelect).vm.$emit('update:modelValue', 'C1')
+    await card2(wrapper).findComponent(DatePicker).vm.$emit('update:modelValue', '2024-05-26')
+    await wrapper.vm.$nextTick()
     await card2(wrapper).find('button[type="submit"]').trigger('click')
     await wrapper.vm.$nextTick()
     console.log('FINAL step=', useKalkulatorStore().step, 'display=', getComputedStyle(card3(wrapper).element).display, 'inline=', JSON.stringify(card3(wrapper).attributes('style')))

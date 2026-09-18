@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore'
 import { getDb, sha256Hex } from './firebase'
 
 export interface AdminTokenDoc {
@@ -55,4 +55,8 @@ export async function listAdminTokens(): Promise<AdminTokenDoc[]> {
 
 export async function revokeAdminToken(hash: string): Promise<void> {
   await updateDoc(doc(getDb(), 'admin_tokens', hash), { status: 'revoked', revokedAt: serverTimestamp() } as unknown as Record<string, unknown>)
+}
+
+export async function deleteAdminToken(hash: string): Promise<void> {
+  await deleteDoc(doc(getDb(), 'admin_tokens', hash))
 }

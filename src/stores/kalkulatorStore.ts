@@ -8,12 +8,19 @@ import { defaultPilihanCc, konfirmasiGolongan } from '../domain/denda'
 import { applyKeringananSelective, DASAR_JENDELA_HARI, normalizeHariTambahan } from '../domain/keringanan'
 import { useAdminStore } from './adminStore'
 
+function startOfToday() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
 export const useKalkulatorStore = defineStore('kalkulator', () => {
   const tarifStore = useTarifStore()
 
   const step = ref<1 | 2 | 3>(1)
   const transaksi = ref<KodeTransaksi | null>(null)
-  const input = ref<KendaraanInput>({ tanggalJatuhTempo: null, golongan: null, pilihanCc: null })
+
+  const input = ref<KendaraanInput>({ tanggalJatuhTempo: startOfToday(), golongan: null, pilihanCc: null })
   const hasil = ref<HasilPerhitungan | null>(null)
 
   const adminStore = useAdminStore()
@@ -24,7 +31,7 @@ export const useKalkulatorStore = defineStore('kalkulator', () => {
   )
 
   function resetFormData() {
-    input.value = { tanggalJatuhTempo: null, golongan: null, pilihanCc: null }
+    input.value = { tanggalJatuhTempo: startOfToday(), golongan: null, pilihanCc: null }
     hasil.value = null
   }
 
