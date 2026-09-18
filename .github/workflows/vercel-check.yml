@@ -5,6 +5,10 @@ name: Vercel Check
 on:
   repository_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   vercel-check:
     name: vercel check
