@@ -1,5 +1,10 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+  type Firestore,
+} from 'firebase/firestore'
 import { getAuth, type Auth } from 'firebase/auth'
 
 const firebaseConfig = {
@@ -20,9 +25,10 @@ function getApp(): FirebaseApp {
 
 export function getDb(): Firestore {
   if (!db) {
-    db = getFirestore(getApp())
-    enableIndexedDbPersistence(db).catch((err: unknown) => {
-      console.warn('[firebase] persistence unavailable', err) // NOSONAR - operational warning for indexedDB fallback
+    // Modern offline persistence (replaces deprecated enableIndexedDbPersistence).
+    // Single-tab manager mirrors the previous single-tab IndexedDB behavior.
+    db = initializeFirestore(getApp(), {
+      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }),
     })
   }
   return db
