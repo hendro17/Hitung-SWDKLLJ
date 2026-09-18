@@ -9,8 +9,8 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('../views/AdminView.vue'),
-      beforeEnter: (_to, _from, next) => {
-        if (import.meta.env.VITE_FEATURE_ADMIN !== 'true') { next('/'); return }
+      beforeEnter: (_to, _from) => {
+        if (import.meta.env.VITE_FEATURE_ADMIN !== 'true') return '/'
         // Purge sesi admin kedaluwarsa (today > validUntil): cegah sesi basi
         // lolos sebagai authenticated. Entry tetap terbuka — AdminView
         // tampilkan form login bila belum authenticated.
@@ -28,19 +28,19 @@ const router = createRouter({
             }
           }
         } catch {/* storage private mode — ignore */}
-        next()
+        return true
       }
     },
     {
       path: '/super-admin',
       name: 'super-admin',
       component: () => import('../views/SuperAdminView.vue'),
-      beforeEnter: (_to, _from, next) => {
+      beforeEnter: (_to, _from) => {
         // Flag saja di guard; Auth + allowlist VITE_SUPER_ADMIN_EMAILS
         // dienforce di view via superAdminStore.isSuperAdmin (butuh
         // Firebase Auth async, tak bisa dicek sinkron di sini).
-        if (import.meta.env.VITE_FEATURE_SUPER_ADMIN !== 'true') { next('/'); return }
-        next()
+        if (import.meta.env.VITE_FEATURE_SUPER_ADMIN !== 'true') return '/'
+        return true
       }
     }
   ]
