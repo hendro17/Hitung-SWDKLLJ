@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -9,9 +9,17 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          vendor: ['vue', 'vue-router', 'pinia']
+        manualChunks(id) {
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
+            return 'firebase'
+          }
+          if (
+            id.includes('node_modules/vue-router') ||
+            id.includes('node_modules/pinia') ||
+            /node_modules\/@?vue\b/.test(id)
+          ) {
+            return 'vendor'
+          }
         }
       }
     }
