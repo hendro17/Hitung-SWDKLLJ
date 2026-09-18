@@ -3,6 +3,7 @@ import { ref, provide } from 'vue'
 import AppSidebar from './components/AppSidebar.vue'
 import AppNavbar from './components/AppNavbar.vue'
 import { Toaster } from 'vue-sonner'
+import { Analytics } from '@vercel/analytics/vue'
 import { useKeringanan } from './composables/useKeringanan'
 
 const sidebarOpen = ref(false)
@@ -32,4 +33,5 @@ provide('openSidebar', openSidebar)
     </footer>
   </div>
   <Toaster position="bottom-right" richColors />
+  <Analytics />
 </template>
