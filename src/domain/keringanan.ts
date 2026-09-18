@@ -52,6 +52,12 @@ export function isKeringananExpired(doc: Pick<KeringananDoc, 'akhir'>, today: Da
   return todayLocalMidnight(today) > parseLocalDate(doc.akhir)
 }
 
+/** sisaHariKeringanan — selisih hari kalender akhir - today (inclusive today → 0 di hari H). Negatif bila expired. */
+export function sisaHariKeringanan(doc: Pick<KeringananDoc, 'akhir'>, today: Date = new Date()): number {
+  const ms = parseLocalDate(doc.akhir).getTime() - todayLocalMidnight(today).getTime()
+  return Math.round(ms / 864e5)
+}
+
 /** applyKeringananSelective — nol-kan slot yang flag true; lain tetap */
 export function applyKeringananSelective(hasil: HasilPerhitungan, doc: KeringananDoc | null): HasilPerhitungan {
   if (!doc || !isKeringananAktif(doc)) return hasil
