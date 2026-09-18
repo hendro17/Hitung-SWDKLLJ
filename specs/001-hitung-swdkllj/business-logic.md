@@ -347,8 +347,8 @@ Logic perhitungan **identik 100% dengan Balik Nama Pemilik (bagian 9.2)** — te
 
 Ditandai eksplisit (bukan silent assumption), mohon dikonfirmasi/dikoreksi sebelum implementasi:
 
-1. **(9.2 Case B)** Formula Pokok Prorata untuk Balik Nama/Mutasi Masuk saat STNK masih berlaku penuh (tidak ada tunggakan) — definisi `anniversary_terakhir_yang_lewat` diasumsikan `due_date_original - 1 tahun`, belum ada contoh angka untuk diverifikasi silang.
-2. **(9.3)** Jatuh Tempo Selanjutnya untuk Mutasi Keluar ketika `tunggakan_count == 0` diasumsikan tetap = `anchor_date` (tidak berubah).
+1. **(9.2 Case B) [CLOSED 2026-09-18, lihat §13.4]** Formula Pokok Prorata untuk Balik Nama/Mutasi Masuk saat STNK masih berlaku penuh (tidak ada tunggakan) — `anniversary_terakhir_yang_lewat = due_date_original − 1 tahun`, terkonfirmasi contoh angka user.
+2. **(9.3) [CLOSED 2026-09-18, lihat §13.4]** Jatuh Tempo Selanjutnya untuk Mutasi Keluar ketika `tunggakan_count == 0` = `anchor_date` (tidak berubah); selisih < 365 hari → total 0, terkonfirmasi contoh angka user.
 3. **(2.1)** Dropdown "jenis kendaraan" diasumsikan menampilkan 9 golongan level-atas (sesuai database), bukan sub-tipe granular (A1-A4, D1-D5, E1-E5, F1-F5) yang muncul di gambar referensi PMK.
 
 ### 13.3 Konfirmasi Hero (2026-09-07) — CLOSED
@@ -358,3 +358,8 @@ Ditandai eksplisit (bukan silent assumption), mohon dikonfirmasi/dikoreksi sebel
 3. **Kartu dana saat prorata 0 bulan**: TIDAK boleh menagih kartu dana (3.000) jika pokok 0 — kartu dana melekat pada Pokok. Kecuali Golongan A yang memang hanya membayar kartu dana saja (tanpa pokok & denda). → Diimplementasikan di `hitungPokokProrata` (src/domain/denda.ts).
 
 Selain 3 poin di atas, seluruh formula core (Pokok, Denda Tunggakan, Denda Berjalan/triwulan, Pokok Prorata, pembulatan, periode/tunggakan, block 30-hari) sudah **terverifikasi matematis** terhadap contoh angka & tabel PMK yang diberikan Hero.
+
+### 13.4 Konfirmasi user (2026-09-18) — CLOSED (§13.1 + §13.2)
+
+1. **§13.1 Case B anniversary = due − 1 tahun — BENAR.** Case 1: due 10 Nov 2026, hari 18 Sep 2026 → anniversary 10 Nov 2025 → 10 bulan prorata, JTS 18 Sep 2027. Case 2: due 10 Okt 2027 (> hari+1 tahun) → 0 bulan / masih berlaku (status lunas).
+2. **§13.2 Mutasi Keluar ambang 365 hari — BENAR.** Selisih due→hari < 365 hari → total 0, JTS = due (cth: due 10 Jan 2026, hari 18 Sep 2026). Selisih > 365 hari → tunggakan dihitung normal (cth: due 10 Jan 2025 → pokok tunggakan1 35.000 + denda 32.000, JTS 10 Jan 2026).

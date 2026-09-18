@@ -1,4 +1,4 @@
-// BALIK_NAMA — business-logic §9.2 / domain-api §6.2. Case A → JTS hariIni+1 tahun; Case B lunas/prorata.
+// BALIK_NAMA — business-logic §9.2 / domain-api §6.2. Case A → JTS hariIni+1 tahun; Case B lunas/prorata (tervalidasi §13.1 2026-09-18).
 import type { CalculationModel } from './perpanjangan'
 import { tambahTahun } from '../periode'
 
@@ -15,7 +15,7 @@ export const modelBalikNama: CalculationModel = {
   }
 }
 
-/** Titik awal prorata Case B (asumsi §13.1: anniversary = dueDateOriginal − 1 tahun). */
+/** Titik awal prorata Case B (tervalidasi §13.1 2026-09-18: anniversary = dueDateOriginal − 1 tahun). */
 export function anniversaryProrata(due: Date): Date {
   const d = new Date(due)
   d.setFullYear(due.getFullYear() - 1, due.getMonth(), due.getDate())

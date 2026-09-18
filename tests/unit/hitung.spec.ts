@@ -259,21 +259,26 @@ describe('BALIK_NAMA / MUTASI_MASUK — skema prorata (§9.2, §9.4)', () => {
   })
 })
 
-// ⚠️ OPEN VALIDATIONS (business-logic §13) — ASUMSI, BUKAN FINAL.
-describe('pending-validasi §13.1 — BALIK_NAMA Case B jalur prorata (asumsi anniversary = due − 1 tahun)', () => {
-  // Asumsi terdokumentasi: anniversary_terakhir_yang_lewat = dueDateOriginal − 1 tahun.
-  // Belum divalidasi contoh angka oleh user; JANGAN dianggap final.
-  it('due ≤ hariIni+1 tahun → prorata dari due−1 tahun tanpa denda, JTS = hariIni+1 tahun', () => {
-    const due = new Date(2026, 9, 6) // 6 Okt 2026 — 40 hari ke depan, STNK masih berlaku (Case B)
-    const r = hitung('BALIK_NAMA', 'C1', due, HARI_INI)
+// ✅ TERVALIDASI 2026-09-18 (business-logic §13.1 CLOSED) — contoh angka user.
+describe('§13.1 TERVALIDASI — BALIK_NAMA Case B prorata anniversary = due − 1 tahun', () => {
+  const HARI = new Date(2026, 8, 18) // 18 Sep 2026
+  it('due 10 Nov 2026 → rincian, 10 bulan prorata Rp29.700, JTS 18 Sep 2027', () => {
+    const r = hitung('BALIK_NAMA', 'C1', new Date(2026, 10, 10), HARI)
     expect(r.status).toBe('rincian')
     expect(r.totalOverdueYears).toBe(0)
     expect(r.dendaBerjalan).toBe(0)
     expect(r.dendaTunggakan1).toBe(0)
-    expect(r.pokokProrata).toBeGreaterThan(0)
-    expect(r.bulanProrata).toBeGreaterThan(0)
-    // asumsi: anniversary = due − 1 tahun = 6 Okt 2025 → 27 Agu 2026 (10 bulan 21 hari → 11 bulan)
-    expect(r.bulanProrata).toBe(11)
+    // anniversary = 10 Nov 2025 → 18 Sep 2026 = 10 bulan penuh + 8 hari (≤15 → tetap 10)
+    expect(r.bulanProrata).toBe(10)
+    expect(r.pokokProrata).toBe(29700)
+    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2027, 8, 18))
+  })
+  it('due 10 Okt 2027 (> hari+1 tahun) → lunas, 0 bulan / masih berlaku', () => {
+    const r = hitung('BALIK_NAMA', 'C1', new Date(2027, 9, 10), HARI)
+    expect(r.status).toBe('lunas')
+    expect(r.totalPremi).toBe(0)
+    expect(r.bulanProrata).toBe(0)
+    expect(r.pokokProrata).toBe(0)
   })
 })
 
@@ -298,17 +303,27 @@ describe('tunggakanCount anniversary-based — subtraction mid-cycle', () => {
   })
 })
 
-// ⚠️ OPEN VALIDATIONS (business-logic §13) — ASUMSI, BUKAN FINAL.
-describe('pending-validasi §13.2 — MUTASI_KELUAR JTS saat tunggakanCount=0 (asumsi = anchorDate)', () => {
-  // Asumsi terdokumentasi: bila tidak ada tunggakan, JTS tetap anchorDate. Belum dikonfirmasi user.
-  it('due tahun ini tanpa tunggakan → total 0 (pokok tidak ada, kartu ikut pokok)', () => {
-    const due = new Date(2026, 9, 6) // gap 40 hari, gapDays>30 → anchorDate = due
-    const r = hitung('MUTASI_KELUAR', 'C1', due, HARI_INI)
+// ✅ TERVALIDASI 2026-09-18 (business-logic §13.2 CLOSED) — contoh angka user.
+describe('§13.2 TERVALIDASI — MUTASI_KELUAR ambang 365 hari', () => {
+  const HARI = new Date(2026, 8, 18) // 18 Sep 2026
+  it('selisih < 365 hari (due 10 Jan 2026) → total 0, JTS = due', () => {
+    const r = hitung('MUTASI_KELUAR', 'C1', new Date(2026, 0, 10), HARI)
     expect(r.status).toBe('rincian')
     expect(r.totalPremi).toBe(0)
     expect(r.pokokBerjalan).toBe(0)
     expect(r.pokokTunggakan1).toBe(0)
-    expect(r.keterlambatan).toBe('0 tahun, 0 bulan, 0 hari')
-    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2026, 9, 6))
+    expect(r.keterlambatan).toBe('0 tahun, 8 bulan, 8 hari')
+    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2026, 0, 10))
+  })
+  it('selisih > 365 hari (due 10 Jan 2025) → tunggakan1 35.000 + denda 32.000, JTS 10 Jan 2026', () => {
+    const r = hitung('MUTASI_KELUAR', 'C1', new Date(2025, 0, 10), HARI)
+    expect(r.status).toBe('rincian')
+    expect(r.pokokBerjalan).toBe(0)
+    expect(r.dendaBerjalan).toBe(0)
+    expect(r.pokokTunggakan1).toBe(35000)
+    expect(r.dendaTunggakan1).toBe(32000)
+    expect(r.totalPremi).toBe(67000)
+    expect(r.keterlambatan).toBe('1 tahun, 8 bulan, 8 hari')
+    expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2026, 0, 10))
   })
 })
