@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterVisibleKeringanan, isKeringananExpired, type KeringananDoc } from '../../src/domain/keringanan'
+import { filterVisibleKeringanan, isKeringananExpired, sisaHariKeringanan, type KeringananDoc } from '../../src/domain/keringanan'
 
 function doc(id: string, akhir: string): KeringananDoc {
   return {
@@ -51,5 +51,23 @@ describe('sidebar keringanan — exclusive switch & expired hide', () => {
     const list = [doc('a', '2026-09-20'), doc('b', '2026-10-31'), doc('c', '2026-09-15')]
     const vis = filterVisibleKeringanan(list, today)
     expect(vis).toHaveLength(3)
+  })
+})
+
+describe('sidebar keringanan — countdown sisa hari per item', () => {
+  it('hari H → 0', () => {
+    expect(sisaHariKeringanan(doc('a', '2026-09-15'), new Date(2026, 8, 15))).toBe(0)
+  })
+  it('H-5 → 5', () => {
+    expect(sisaHariKeringanan(doc('a', '2026-09-20'), new Date(2026, 8, 15))).toBe(5)
+  })
+  it('beda item beda countdown', () => {
+    const today = new Date(2026, 8, 15)
+    expect(sisaHariKeringanan(doc('a', '2026-09-20'), today)).toBe(5)
+    expect(sisaHariKeringanan(doc('b', '2026-10-31'), today)).toBe(46)
+    expect(sisaHariKeringanan(doc('c', '2026-09-15'), today)).toBe(0)
+  })
+  it('expired → negatif', () => {
+    expect(sisaHariKeringanan(doc('a', '2026-08-31'), new Date(2026, 8, 15))).toBe(-15)
   })
 })
