@@ -19,7 +19,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "firebase": "^10.14.1",
+    "firebase": "^12.19.0",
     "lucide-vue-next": "^1.0.0",
     "pinia": "^4.0.3",
     "reka-ui": "^2.10.4",
