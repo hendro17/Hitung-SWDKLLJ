@@ -77,18 +77,32 @@ function resolveBalikMasuk(p: DataPeriode, hariIni: Date, tarif: TarifGolongan):
   const prorataMulai = p.gapDays > 0 ? setYear(p.dueDateOriginal, p.currentYear - 1) : p.anchorDate
   if (p.gapDays > 30) {
     // anchor tahun ini masih >30 hari lagi: tagih tahun berjalan mulai anniversary terakhir + prorata.
+    // Cap 5 tahun Jasa Raharja: 1 berjalan + 4 tunggakan sudah penuh → prorata 0.
     const d = dendaDari(prorataMulai)
+    if (p.tunggakanCount >= 4) {
+      return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: 0, bulanProrata: 0 }
+    }
     const pr = prorataDari(prorataMulai)
     return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
   }
   if (p.gapDays <= 0) {
     // anchor sudah lewat: berjalan dari anchor + prorata.
+    // Cap 5 tahun Jasa Raharja: 1 berjalan + 4 tunggakan sudah penuh → prorata 0.
     const d = dendaDari(p.anchorDate)
+    if (p.tunggakanCount >= 4) {
+      return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: 0, bulanProrata: 0 }
+    }
     const pr = prorataDari(p.anchorDate)
     return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
   }
   // gap ∈ (0,30]: tahun di anchor masa depan belum dibeli — prorata dari anchor−1 tahun.
-  const pr = prorataDari(setYear(p.dueDateOriginal, p.currentYear - 1))
+  // Koreksi: prorata maksimal 11 bulan. Jika 12 bulan berarti 1 tahun penuh → tagih Berjalan + Denda.
+  const mulai = setYear(p.dueDateOriginal, p.currentYear - 1)
+  const pr = prorataDari(mulai)
+  if (pr.bulanProrata >= 12) {
+    const d = dendaDari(mulai)
+    return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: 0, bulanProrata: 0 }
+  }
   return { ...hasilKosong(), pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
 }
 
