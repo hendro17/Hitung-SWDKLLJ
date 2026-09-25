@@ -236,13 +236,13 @@ describe('BALIK_NAMA / MUTASI_MASUK — skema prorata (§9.2, §9.4)', () => {
     expect(r.keterlambatan).toBe('0 tahun, 8 bulan, 1 hari')
   })
 
-  it('Case A window: due 20 Sep 2025 (anchor 24d lagi) → tahun anchor belum dibeli, T1 + prorata 11 bln', () => {
-    // tunggakan 1 (2025), prorata dari 20 Sep 2024 → 27 Agu 2026 = 23 bln 7 hari → 23 bln → probe: 11 bln 32.400
+  it('Case A window: due 20 Sep 2025 (anchor 24d lagi) → Berjalan + prorata 11 bln (periode terakhir jadi Berjalan)', () => {
+    // Berjalan [20 Sep 2025, 20 Sep 2026], denda 341 hari → Q4 32.000; prorata [20 Sep 2026, 27 Agu 2027] = 11 bln 32.400
     const r = hitung('BALIK_NAMA', 'C1', new Date(2025, 8, 20), HARI_INI)
-    expect(r.pokokBerjalan).toBe(0)
-    expect(r.dendaBerjalan).toBe(0)
-    expect(r.pokokTunggakan1).toBe(35000)
-    expect(r.dendaTunggakan1).toBe(32000)
+    expect(r.pokokBerjalan).toBe(35000)
+    expect(r.dendaBerjalan).toBe(32000)
+    expect(r.pokokTunggakan1).toBe(0)
+    expect(r.dendaTunggakan1).toBe(0)
     expect(r.bulanProrata).toBe(11)
     expect(r.pokokProrata).toBe(32400)
     expect(r.totalPremi).toBe(99400)
