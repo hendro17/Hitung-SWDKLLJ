@@ -12,16 +12,6 @@
       </div>
 
       <button
-        v-if="install.canInstall.value"
-        id="btn-install"
-        type="button"
-        class="rounded-full bg-brand-strong px-4 py-2 text-sm font-semibold text-white"
-        @click="install.promptInstall()"
-      >
-        Pasang App
-      </button>
-
-      <button
         type="button"
         class="flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-surface"
         :aria-label="'Ganti tema terang/gelap'"
@@ -42,9 +32,7 @@
 <script setup lang="ts">
 import { inject } from 'vue'
 import { useTheme } from '../composables/useTheme'
-import { usePwaInstall } from '../composables/usePwaInstall'
 
 const theme = useTheme()
-const install = usePwaInstall()
 const openSidebar = inject<() => void>('openSidebar')
 </script>
