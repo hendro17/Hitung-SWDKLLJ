@@ -36,10 +36,6 @@
         </svg>
       </button>
     </div>
-
-    <p v-if="install.isIos.value" id="hint-ios" class="px-4 pb-2 text-xs text-mu">
-      Tips iPhone: buka menu Bagikan lalu pilih Tambahkan ke Layar Utama untuk memasang aplikasi.
-    </p>
   </nav>
 </template>
 
