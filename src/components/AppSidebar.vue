@@ -23,6 +23,30 @@
           </button>
         </div>
       </div>
+      <div class="mt-auto border-t border-line p-3 space-y-2">
+        <button
+          v-if="!install.isInstalled.value"
+          id="btn-install-sidebar"
+          type="button"
+          class="w-full rounded-2xl bg-brand-strong px-4 py-2.5 text-sm font-semibold text-white"
+          @click="install.promptInstall()"
+        >
+          {{ install.canInstall.value ? 'Unduh Aplikasi (PWA)' : 'Cara Pasang Aplikasi' }}
+        </button>
+        <p v-else class="text-center text-xs font-semibold text-mu">Aplikasi sudah terpasang.</p>
+        <p v-if="install.showManual.value || install.isIos.value" class="text-xs leading-relaxed text-mu">
+          Browser belum menawarkan instalasi otomatis. Chrome desktop: menu ⋮ → Save and share → Install page as app.
+          Android Chrome: menu ⋮ → Add to Home screen. iPhone: menu Bagikan → Tambahkan ke Layar Utama.
+        </p>
+        <a
+          href="https://github.com/hendro17/Hitung-SWDKLLJ/releases"
+          target="_blank"
+          rel="noopener"
+          class="block text-center text-xs text-mu hover:text-ink"
+        >
+          Versi rilis v{{ appVersion }}
+        </a>
+      </div>
     </dialog>
   </div>
 </template>
@@ -31,11 +55,14 @@
 import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '../stores/adminStore'
+import { usePwaInstall } from '../composables/usePwaInstall'
 import { sisaHariKeringanan } from '../domain/keringanan'
 import type { KeringananDoc } from '../domain/keringanan'
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const admin = useAdminStore()
+const install = usePwaInstall()
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'
 const router = useRouter()
 const panelRef = ref<HTMLElement | null>(null)
 function go(path: string) { emit('close'); router.push(path) }
