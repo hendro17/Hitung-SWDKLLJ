@@ -1,6 +1,6 @@
 // hitungPerhitungan — orkestrator utama (domain-api §6 / business-logic §9). Murni.
 import type { DataPeriode, HasilPerhitungan, InputHitung, TarifGolongan } from './types'
-import { bangunDataPeriode, setYear } from './periode'
+import { bangunDataPeriode, setYear, tambahTahun } from './periode'
 import { bulanPenuhDanSisa, hitungDendaBerjalan, hitungPokokProrata } from './denda'
 import { anniversaryProrata } from './models/balik-nama'
 import { hitungJatuhTempoSelanjutnya, tentukanStatus } from './models'
@@ -77,19 +77,35 @@ function resolveBalikMasuk(p: DataPeriode, hariIni: Date, tarif: TarifGolongan):
   const prorataMulai = p.gapDays > 0 ? setYear(p.dueDateOriginal, p.currentYear - 1) : p.anchorDate
   if (p.gapDays > 30) {
     // anchor tahun ini masih >30 hari lagi: tagih tahun berjalan mulai anniversary terakhir + prorata.
+    // Cap 5 tahun Jasa Raharja: 1 berjalan + 4 tunggakan sudah penuh → prorata 0.
     const d = dendaDari(prorataMulai)
+    if (p.tunggakanCount >= 4) {
+      return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: 0, bulanProrata: 0 }
+    }
     const pr = prorataDari(prorataMulai)
     return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
   }
   if (p.gapDays <= 0) {
     // anchor sudah lewat: berjalan dari anchor + prorata.
+    // Cap 5 tahun Jasa Raharja: 1 berjalan + 4 tunggakan sudah penuh → prorata 0.
     const d = dendaDari(p.anchorDate)
+    if (p.tunggakanCount >= 4) {
+      return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: 0, bulanProrata: 0 }
+    }
     const pr = prorataDari(p.anchorDate)
     return { pokokBerjalan: pokokBundled, dendaBerjalan: d.denda, pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
   }
-  // gap ∈ (0,30]: tahun di anchor masa depan belum dibeli — prorata dari anchor−1 tahun.
-  const pr = prorataDari(setYear(p.dueDateOriginal, p.currentYear - 1))
-  return { ...hasilKosong(), pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
+  // gap ∈ (0,30]: periode terakhir selalu Berjalan [anchor-1th, anchor], denda dari mulaiPast ke today.
+  // Prorata = [anchor, JTS=today+1th] bila total <5 thn. Jika prorata >=12 bln → geser: Berjalan penuh, prorata 0, tunggakan tetap.
+  // Jika prorata <12 bln → tunggakan efektif = tunggakanCount-1 (pemanggil yang menyesuaikan slot).
+  const mulaiPast = setYear(p.dueDateOriginal, p.currentYear - 1)
+  const jts = tambahTahun(hariIni, 1)
+  const prFuture = hitungPokokProrata(p.anchorDate, jts, tarif)
+  const dPast = dendaDari(mulaiPast)
+  if (prFuture.bulanProrata >= 12) {
+    return { pokokBerjalan: pokokBundled, dendaBerjalan: dPast.denda, pokokProrata: 0, bulanProrata: 0 }
+  }
+  return { pokokBerjalan: pokokBundled, dendaBerjalan: dPast.denda, pokokProrata: prFuture.pokokProrata, bulanProrata: prFuture.bulanProrata }
 }
 
 /** PERPANJANGAN (§9.1) — status sudah menyaring, di sini selalu boleh dikenakan.
@@ -158,7 +174,20 @@ export function hitungPerhitungan(
   }
 
   const pokokBundled = tarif.tarifPokok + tarif.kartuDana
-  const { t1, t2, t3, t4 } = buildTunggakanSlots(p.tunggakanCount, pokokBundled, tarif.tarifDendaMaksimal)
+  // BALIK_NAMA/MUTASI_MASUK gap (0,30] non-geser: periode terakhir jadi Berjalan → slot tunggakan = count-1.
+  // Geser (prorata [anchor,JTS] >=12): slot tetap count.
+  let tunggakanEff = p.tunggakanCount
+  if (
+    (input.transaksi === 'BALIK_NAMA' || input.transaksi === 'MUTASI_MASUK') &&
+    input.dueDateOriginal <= hariIni && p.gapDays > 0 && p.gapDays <= 30
+  ) {
+    const jts = tambahTahun(hariIni, 1)
+    const { fullMonths, remainingDays } = bulanPenuhDanSisa(p.anchorDate, jts)
+    if (fullMonths + (remainingDays > 15 ? 1 : 0) < 12) {
+      tunggakanEff = Math.max(p.tunggakanCount - 1, 0)
+    }
+  }
+  const { t1, t2, t3, t4 } = buildTunggakanSlots(tunggakanEff, pokokBundled, tarif.tarifDendaMaksimal)
   const berjalan = resolveBerjalanDanProrata(p, input.transaksi, hariIni, tarif, windowDays)
 
   let d1 = t1.denda
