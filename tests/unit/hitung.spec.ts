@@ -211,13 +211,13 @@ describe('BALIK_NAMA / MUTASI_MASUK — skema prorata (§9.2, §9.4)', () => {
     expect(r.jatuhTempoSelanjutnya).toEqual(new Date(2027, 7, 27))
   })
 
-  it('Case B: due 2 Sep 2026 (gap +6) → prorata 12 bln dari anniversary 2 Sep 2025', () => {
-    // 2 Sep 2025 → 27 Agu 2026 = 11 bln 25 hari → 12 bln → 32k×12/12+3k = 35.000
+  it('Case B: due 2 Sep 2026 (gap +6) → 12 bln jadi Berjalan, prorata 0', () => {
+    // 2 Sep 2025 → 27 Agu 2026 = 11 bln 25 hari → 12 bln → jadi Berjalan 35.000, prorata 0
     const r = hitung('BALIK_NAMA', 'C1', new Date(2026, 8, 2), HARI_INI)
-    expect(r.pokokBerjalan).toBe(0)
+    expect(r.pokokBerjalan).toBe(35000)
     expect(r.dendaBerjalan).toBe(0)
-    expect(r.bulanProrata).toBe(12)
-    expect(r.pokokProrata).toBe(35000)
+    expect(r.bulanProrata).toBe(0)
+    expect(r.pokokProrata).toBe(0)
     expect(r.totalPremi).toBe(35000)
   })
 
