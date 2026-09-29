@@ -68,9 +68,13 @@ function resolveBalikMasuk(p: DataPeriode, hariIni: Date, tarif: TarifGolongan):
   const dendaDari = (mulai: Date) => hitungDendaBerjalan(mulai, hariIni, tarif)
   const prorataDari = (mulai: Date) => hitungPokokProrata(mulai, hariIni, tarif)
 
-  // Case B (§9.2): STNK masih berlaku — prorata saja, tanpa berjalan/denda.
+  // Case B (§9.2): STNK masih berlaku — prorata saja, tanpa denda/tunggakan.
+  // Prorata maksimal 11 bulan. Jika 12 bulan → jadi Pokok Berjalan, prorata 0.
   if (p.dueDateOriginal > hariIni) {
     const pr = prorataDari(anniversaryProrata(p.dueDateOriginal))
+    if (pr.bulanProrata >= 12) {
+      return { pokokBerjalan: pokokBundled, dendaBerjalan: 0, pokokProrata: 0, bulanProrata: 0 }
+    }
     return { ...hasilKosong(), pokokProrata: pr.pokokProrata, bulanProrata: pr.bulanProrata }
   }
   // Case A: overdue — prorata mulai anniversary terakhir yang sudah lewat.
