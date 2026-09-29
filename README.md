@@ -1,5 +1,16 @@
 # Hitung SWDKLLJ — Kalkulator Jasa Raharja
 
+[![Build](https://github.com/hendro17/Hitung-SWDKLLJ/actions/workflows/build.yml/badge.svg)](https://github.com/hendro17/Hitung-SWDKLLJ/actions/workflows/build.yml)
+[![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D?logo=vue&logoColor=white&style=flat-square)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white&style=flat-square)](https://www.typescriptlang.org/)
+[![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white&style=flat-square)](https://vite.dev/)
+[![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white&style=flat-square)](https://tailwindcss.com/)
+[![PWA offline-first](https://img.shields.io/badge/PWA-offline--first-0e6db8?logo=pwa&logoColor=white&style=flat-square)](https://web.dev/progressive-web-apps/)
+[![Node 22](https://img.shields.io/badge/Node-22-339933?logo=nodedotjs&logoColor=white&style=flat-square)](https://nodejs.org/)
+[![pnpm 10](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white&style=flat-square)](https://pnpm.io/)
+[![Vitest 147 passed](https://img.shields.io/badge/Vitest-147_passed-6E9F18?logo=vitest&logoColor=white&style=flat-square)](./tests/)
+[![Playwright 3 browsers](https://img.shields.io/badge/Playwright-Chromium_Firefox_WebKit-2EAD33?logo=playwright&logoColor=white&style=flat-square)](./e2e/)
+
 Kalkulator estimasi tarif SWDKLLJ Jasa Raharja: premi berjalan, denda, dan tunggakan hingga 5 tahun. PWA offline-first, installable, tanpa backend.
 
 > Tarif dasar mengacu pada **PMK No. 36/PMK.010/2008** · denda triwulan resmi (`triwulan = MIN(CEIL(bulan/3), 4)`, denda = `tarif_denda_maksimal × 0,25 × triwulan`). Hasil bersifat estimasi — penetapan resmi mengikuti ketentuan Samsat & Jasa Raharja.
@@ -11,16 +22,16 @@ Kalkulator estimasi tarif SWDKLLJ Jasa Raharja: premi berjalan, denda, dan tungg
 - **Tarif read-only dari CSV** (`src/data/tarif-swdkllj.csv`, 9 golongan) — fail-closed jika CSV rusak; angka tarif identik untuk semua transaksi
 - **Perhitungan**: block Perpanjangan `belum-jatuh-tempo` (gap > 30 hari), cap tunggakan 4 tahun (maks 5 periode), anti-fraud selisih kalender absolut
 - **Keringanan denda**: admin token (env, offline-capable) + super admin; periode keringanan lokal, staleness bound dinamis = tanggal akhir periode (Firebase Remote Config ditunda)
-- **PWA**: `standalone`, 28 precache entries, network-first navigasi / cache-first aset, `lang: id`
-- **Kualitas**: 143 unit test + 9 E2E Playwright (Chromium/Firefox/WebKit), typecheck bersih
+- **PWA**: `standalone`, `lang: id`, `theme_color: #0e6db8`, ikon 192/512, Workbox `generateSW` (NetworkFirst navigasi / CacheFirst aset, precache `js,css,html,svg,png,woff2,csv`)
+- **Kualitas**: 147 Vitest lolos (15 files: `tests/unit` + `tests/components`) + 3 smoke E2E Playwright (Chromium/Firefox/WebKit), `vue-tsc` bersih, SonarQube scan + quality gate di CI
 
 ## Tech Stack
 
-- **Vue 3** Composition API `<script setup>` + **TypeScript** + **Vite 7**
+- **Vue 3.5** Composition API `<script setup>` + **TypeScript** + **Vite 8**
 - **Tailwind CSS v4** — satu-satunya fondasi styling; token Open Design (`oklch` light/dark, Plus Jakarta Sans, `rounded-3xl/2xl/full`, `shadow-card/pop`) dipetakan sebagai `@theme`
-- **Pinia** setup stores, **vue-router** (history mode), **reka-ui**, **vite-plugin-pwa** (Workbox `generateSW`)
-- **Firebase JS SDK** (lazy, chunk terpisah) — distribusi cloud ditunda, kontrak cadence tetap terdokumentasi
-- **Vitest** + `@vue/test-utils`, **Playwright** E2E
+- **Pinia 4** setup stores, **vue-router 5** (history mode), **reka-ui 2**, **vite-plugin-pwa 1** (Workbox `generateSW`)
+- **Firebase JS SDK 12** (lazy, chunk `firebase` terpisah; `vendor` untuk Vue/Pinia/Router) — distribusi cloud ditunda, kontrak cadence tetap terdokumentasi
+- **Vitest 4** + `@vue/test-utils` + `jsdom`, **Playwright 1.63** E2E, **vue-tsc** typecheck
 
 ## Struktur Proyek
 
@@ -42,7 +53,7 @@ firestore.rules         # ownership + super bypass, list super-only
 
 ## Prasyarat
 
-- Node.js ≥ 20, pnpm ≥ 10 (`packageManager: pnpm@10.15.0`)
+- Node.js 22 (CI pakai 22, minimal ≥ 20), pnpm 10 (`packageManager: pnpm@10.34.5`)
 
 ## Quickstart
 
@@ -50,10 +61,17 @@ firestore.rules         # ownership + super bypass, list super-only
 pnpm install
 pnpm dev              # http://localhost:5173
 pnpm build && pnpm preview  # PWA preview di :4173 — uji offline & installability
-pnpm test -- --run    # Vitest (143 test)
-pnpm e2e              # Playwright, butuh preview server di :4173
+pnpm vitest run       # Vitest (147 test, 15 files)
+pnpm test:coverage    # coverage v8 → coverage/lcov.info (umpan SonarQube)
+pnpm e2e              # Playwright (webServer preview otomatis di :4173)
 pnpm typecheck        # vue-tsc --noEmit
 ```
+
+## CI
+
+- `Build` (`.github/workflows/build.yml`): push `main` + PR — `pnpm build`, `test:coverage`, SonarQube scan + quality gate.
+- `Vercel Check` (`.github/workflows/vercel-check.yml`): `repository_dispatch` dari Vercel — `pnpm typecheck`.
+- Dependabot aktif (`.github/dependabot.yml`).
 
 ## Tarif (PMK No. 36/PMK.010/2008, kartu dana Rp3.000 semua golongan)
 
